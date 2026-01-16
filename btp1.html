@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FiscalBTP Pro - Accompagnement Fiscal BTP</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">   
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fas fa-hard-hat"></i>
+                <span>FiscalBTP Pro</span>
+            </div>
+            <div class="user-info">
+                <button class="notification-btn" onclick="alert('3 nouvelles notifications')">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge">3</span>
+                </button>
+                <span>Expert Comptable</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav>
+                <div class="nav-item active" onclick="showSection('dashboard', this)">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Tableau de bord</span>
+                </div>
+                <div class="nav-item" onclick="showSection('chantiers', this)">
+                    <i class="fas fa-building"></i>
+                    <span>Chantiers</span>
+                </div>
+                <div class="nav-item" onclick="showSection('guidage', this)">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span>Guidage fiscal</span>
+                </div>
+                <div class="nav-item" onclick="showSection('alertes', this)">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Alertes</span>
+                </div>
+                <div class="nav-item" onclick="showSection('documents', this)">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Documents</span>
+                </div>
+                <div class="nav-item" onclick="showSection('rapports', this)">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Rapports</span>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section active">
+                <h1 style="margin-bottom: 2rem;">Tableau de bord</h1>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value">24</div>
+                                <div class="stat-label">Chantiers actifs</div>
+                            </div>
+                            <div class="stat-icon primary">
+                                <i class="fas fa-building"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value">8</div>
+                                <div class="stat-label">Alertes en cours</div>
+                            </div>
+                            <div class="stat-icon warning">
+                                <i class="fas fa-exclamation-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value">92%</div>
+                                <div class="stat-label">Conformité fiscale</div>
+                            </div>
+                            <div class="stat-icon success">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value">5</div>
+                                <div class="stat-label">Échéances 7 jours</div>
+                            </div>
+                            <div class="stat-icon danger">
+                                <i class="fas fa-calendar-alt"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i>
+                            Actions prioritaires
+                        </h2>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div>
+                            <strong>Retenue de garantie à régulariser</strong>
+                            <p>Chantier "Résidence Les Jardins" - Montant: 45 000€ - Échéance: 20/01/2026</p>
+                        </div>
+                    </div>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle"></i>
+                        <div>
+                            <strong>Documents manquants</strong>
+                            <p>Attestation fiscale sous-traitant pour "Centre Commercial Nord"</p>
+                        </div>
+                    </div>
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        <div>
+                            <strong>Déclaration TVA validée</strong>
+                            <p>Chantier "Immeuble Durand" - Soumis avec succès le 14/01/2026</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-clock"></i>
+                            Échéances à venir
+                        </h2>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Chantier</th>
+                                    <th>Type</th>
+                                    <th>Date</th>
+                                    <th>Montant</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Résidence Les Jardins</td>
+                                    <td>Retenue de garantie</td>
+                                    <td>20/01/2026</td>
+                                    <td>45 000€</td>
+                                    <td><span class="badge badge-warning">En attente</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Centre Commercial Nord</td>
+                                    <td>TVA sur acompte</td>
+                                    <td>25/01/2026</td>
+                                    <td>78 500€</td>
+                                    <td><span class="badge badge-danger">Urgent</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Bureaux Tech Park</td>
+                                    <td>Déclaration CA</td>
+                                    <td>31/01/2026</td>
+                                    <td>125 000€</td>
+                                    <td><span class="badge badge-primary">À venir</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Chantiers Section -->
+            <section id="chantiers" class="section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h1>Gestion des chantiers</h1>
+                    <button id="openNewChantierBtn" class="btn btn-primary" onclick="openModal('newChantierModal')">
+                        <i class="fas fa-plus"></i>
+                        Nouveau chantier
+                    </button>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-building"></i>
+                            Liste des chantiers
+                        </h2>
+                        <input id="chantierSearch" type="text" class="form-input" placeholder="Rechercher un chantier..." style="max-width: 300px;">
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nom du chantier</th>
+                                    <th>Client</th>
+                                    <th>CA total</th>
+                                    <th>Acomptes</th>
+                                    <th>Statut fiscal</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="chantierTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Guidage Section -->
+            <section id="guidage" class="section">
+                <h1 style="margin-bottom: 2rem;">Guidage fiscal</h1>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-clipboard-check"></i>
+                            Check-list fiscale - Résidence Les Jardins
+                        </h2>
+                        <div>
+                            <span style="margin-right: 1rem;">Progression: 75%</span>
+                            <div class="progress-bar" style="width: 200px; display: inline-block;">
+                                <div class="progress-fill" style="width: 75%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <ul class="checklist">
+                        <li class="checklist-item">
+                            <input type="checkbox" class="checkbox" checked>
+                            <span class="checklist-text completed">Vérifier le montant total du chiffre d'affaires du chantier</span>
+                            <span class="badge badge-success">Validé</span>
+                        </li>
+                        <li class="checklist-item">
+                            <input type="checkbox" class="checkbox" checked>
+                            <span class="checklist-text completed">Vérifier la nature des travaux (neuf, rénovation, entretien)</span>
+                            <span class="badge badge-success">Validé</span>
+                        </li>
+                        <li class="checklist-item">
+                            <input type="checkbox" class="checkbox" checked>
+                            <span class="checklist-text completed">Collecter les factures de sous-traitance</span>
+                            <span class="badge badge-success">Validé</span>
+                        </li>
+                        <li class="checklist-item">
+                            <input type="checkbox" class="checkbox">
+                            <span class="checklist-text">Vérifier les attestations fiscales des sous-traitants</span>
+                            <span class="badge badge-warning">En cours</span>
+                        </li>
+                        <li class="checklist-item">
+                            <input type="checkbox" class="checkbox">
+                            <span class="checklist-text">Calculer le ratio acomptes/CA (si > 50%, alerte fiscale)</span>
+                            <span class="badge badge-danger">À faire</span>
+                        </li>
+                        <li class="checklist-item">
+                            <input type="checkbox" class="checkbox">
+                            <span class="checklist-text">Vérifier les retenues de garantie et leur traitement fiscal</span>
+                            <span class="badge badge-danger">À faire</span>
+                        </li>
+                        <li class="checklist-item">
+                            <input type="checkbox" class="checkbox" checked>
+                            <span class="checklist-text completed">S'assurer de la cohérence des dates de facturation</span>
+                            <span class="badge badge-success">Validé</span>
+                        </li>
+                        <li class="checklist-item">
+                            <input type="checkbox" class="checkbox">
+                            <span class="checklist-text">Vérifier l'application correcte de la TVA selon le type de travaux</span>
+                            <span class="badge badge-warning">En cours</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-question-circle"></i>
+                            Questions de guidage
+                        </h2>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ce chantier a-t-il généré des acomptes supérieurs à 50% du CA total ?</label>
+                        <select class="form-select">
+                            <option>Sélectionner...</option>
+                            <option>Oui</option>
+                            <option>Non</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Le chantier fait-il appel à de la sous-traitance ?</label>
+                        <select class="form-select">
+                            <option>Sélectionner...</option>
+                            <option>Oui</option>
+                            <option>Non</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Type de travaux réalisés</label>
+                        <select class="form-select">
+                            <option>Sélectionner...</option>
+                            <option>Construction neuve</option>
+                            <option>Rénovation lourde</option>
+                            <option>Rénovation légère</option>
+                            <option>Entretien</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        Enregistrer les réponses
+                    </button>
+                </div>
+            </section>
+
+            <!-- Alertes Section -->
+            <section id="alertes" class="section">
+                <h1 style="margin-bottom: 2rem;">Alertes et notifications</h1>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Alertes critiques
+                        </h2>
+                        <span class="badge badge-danger">3 alertes</span>
+                    </div>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-file-excel"></i>
+                        <div style="flex: 1;">
+                            <strong>Documents manquants - Centre Commercial Nord</strong>
+                            <p>Attestation fiscale sous-traitant "Électricité Pro SARL" - Requis avant le 18/01/2026</p>
+                            <button class="btn btn-primary" style="margin-top: 0.5rem;">Demander le document</button>
+                        </div>
+                    </div>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-calendar-times"></i>
+                        <div style="flex: 1;">
+                            <strong>Échéance dépassée - TVA sur acompte</strong>
+                            <p>Chantier "Bureaux Tech Park" - Déclaration en retard de 2 jours</p>
+                            <button class="btn btn-primary" style="margin-top: 0.5rem;">Régulariser maintenant</button>
+                        </div>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div style="flex: 1;">
+                            <strong>Seuil de TVA proche</strong>
+                            <p>Chantier "Résidence Les Jardins" - 90% du seuil atteint</p>
+                            <button class="btn btn-secondary" style="margin-top: 0.5rem;">Voir détails</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Documents Section (New) -->
+            <section id="documents" class="section">
+                <h1 style="margin-bottom: 2rem;">Documents fiscaux</h1>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-folder"></i> Mes documents</h2>
+                        <button class="btn btn-primary"><i class="fas fa-upload"></i> Importer</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Type</th>
+                                    <th>Date</th>
+                                    <th>Taille</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Déclaration TVA Janvier.pdf</td>
+                                    <td>PDF</td>
+                                    <td>15/01/2026</td>
+                                    <td>2.4 MB</td>
+                                    <td><button class="action-btn"><i class="fas fa-download"></i></button></td>
+                                </tr>
+                                <tr>
+                                    <td>Attestation Urssaf.pdf</td>
+                                    <td>PDF</td>
+                                    <td>10/01/2026</td>
+                                    <td>1.1 MB</td>
+                                    <td><button class="action-btn"><i class="fas fa-download"></i></button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Rapports Section (New) -->
+            <section id="rapports" class="section">
+                <h1 style="margin-bottom: 2rem;">Rapports et Analyses</h1>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">1.2M€</div>
+                        <div class="stat-label">CA Cumulé 2026</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">240k€</div>
+                        <div class="stat-label">TVA Collectée</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">Évolution du CA</h2>
+                    </div>
+                    <div style="height: 200px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-radius: 8px; color: var(--text-gray);">
+                        <i class="fas fa-chart-area" style="font-size: 3rem; margin-right: 1rem;"></i>
+                        <span>Graphique d'évolution (Placeholder)</span>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Modal Nouveau Chantier -->
+    <div class="modal" id="newChantierModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="chantierModalTitle">Nouveau Chantier</h2>
+                <button class="modal-close" onclick="closeModal('newChantierModal')">&times;</button>
+            </div>
+            <form id="newChantierForm">
+                <div class="form-group">
+                    <label class="form-label">Nom du chantier</label>
+                    <input id="chantierName" type="text" class="form-input" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Client</label>
+                        <input id="chantierClient" type="text" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Budget prévisionnel</label>
+                        <input id="chantierBudget" type="number" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Acomptes (%)</label>
+                        <input id="chantierAcomptes" type="number" class="form-input" min="0" max="100" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date de début</label>
+                        <input id="chantierDateDebut" type="date" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Type de travaux</label>
+                    <select id="chantierType" class="form-select">
+                        <option>Neuf</option>
+                        <option>Rénovation</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('newChantierModal')">Annuler</button>
+                    <button id="chantierSubmitBtn" type="submit" class="btn btn-primary">Créer le chantier</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="chantierDetailsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Détails du chantier</h2>
+                <button class="modal-close" onclick="closeModal('chantierDetailsModal')">&times;</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-info-circle"></i> Informations</h2>
+                    </div>
+                    <div style="padding: 1rem;">
+                        <p><strong>Nom:</strong> <span id="detailsName"></span></p>
+                        <p><strong>Client:</strong> <span id="detailsClient"></span></p>
+                        <p><strong>Budget:</strong> <span id="detailsBudget"></span></p>
+                        <p><strong>Acomptes:</strong> <span id="detailsAcomptes"></span></p>
+                        <p><strong>Date de début:</strong> <span id="detailsDateDebut"></span></p>
+                        <p><strong>Type:</strong> <span id="detailsType"></span></p>
+                        <p><strong>Statut fiscal:</strong> <span id="detailsStatut"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
+                <button class="btn btn-secondary" onclick="closeModal('chantierDetailsModal')">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
