@@ -67,7 +67,7 @@
                     <div class="stat-card">
                         <div class="stat-header">
                             <div>
-                                <div class="stat-value">24</div>
+                                <div class="stat-value" id="stat-chantiers-actifs">--</div>
                                 <div class="stat-label">Chantiers actifs</div>
                             </div>
                             <div class="stat-icon primary">
@@ -79,7 +79,7 @@
                     <div class="stat-card">
                         <div class="stat-header">
                             <div>
-                                <div class="stat-value">8</div>
+                                <div class="stat-value" id="stat-alertes">--</div>
                                 <div class="stat-label">Alertes en cours</div>
                             </div>
                             <div class="stat-icon warning">
@@ -91,7 +91,7 @@
                     <div class="stat-card">
                         <div class="stat-header">
                             <div>
-                                <div class="stat-value">92%</div>
+                                <div class="stat-value" id="stat-conformite">--%</div>
                                 <div class="stat-label">Conformité fiscale</div>
                             </div>
                             <div class="stat-icon success">
@@ -120,25 +120,10 @@
                             Actions prioritaires
                         </h2>
                     </div>
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <div>
-                            <strong>Retenue de garantie à régulariser</strong>
-                            <p>Chantier "Résidence Les Jardins" - Montant: 45 000€ - Échéance: 20/01/2026</p>
-                        </div>
-                    </div>
-                    <div class="alert alert-danger">
-                        <i class="fas fa-times-circle"></i>
-                        <div>
-                            <strong>Documents manquants</strong>
-                            <p>Attestation fiscale sous-traitant pour "Centre Commercial Nord"</p>
-                        </div>
-                    </div>
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i>
-                        <div>
-                            <strong>Déclaration TVA validée</strong>
-                            <p>Chantier "Immeuble Durand" - Soumis avec succès le 14/01/2026</p>
+                    <div id="actions-prioritaires-container">
+                        <div class="alert alert-info">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <div>Chargement des actions...</div>
                         </div>
                     </div>
                 </div>
@@ -151,7 +136,7 @@
                         </h2>
                     </div>
                     <div class="table-container">
-                        <table>
+                        <table id="calendar-table">
                             <thead>
                                 <tr>
                                     <th>Chantier</th>
@@ -162,27 +147,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>Résidence Les Jardins</td>
-                                    <td>Retenue de garantie</td>
-                                    <td>20/01/2026</td>
-                                    <td>45 000€</td>
-                                    <td><span class="badge badge-warning">En attente</span></td>
-                                </tr>
-                                <tr>
-                                    <td>Centre Commercial Nord</td>
-                                    <td>TVA sur acompte</td>
-                                    <td>25/01/2026</td>
-                                    <td>78 500€</td>
-                                    <td><span class="badge badge-danger">Urgent</span></td>
-                                </tr>
-                                <tr>
-                                    <td>Bureaux Tech Park</td>
-                                    <td>Déclaration CA</td>
-                                    <td>31/01/2026</td>
-                                    <td>125 000€</td>
-                                    <td><span class="badge badge-primary">À venir</span></td>
-                                </tr>
+                                <!-- Généré par JS -->
                             </tbody>
                         </table>
                     </div>
@@ -227,103 +192,50 @@
 
             <!-- Guidage Section -->
             <section id="guidage" class="section">
-                <h1 style="margin-bottom: 2rem;">Guidage fiscal</h1>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <i class="fas fa-clipboard-check"></i>
-                            Check-list fiscale - Résidence Les Jardins
-                        </h2>
-                        <div>
-                            <span style="margin-right: 1rem;">Progression: 75%</span>
-                            <div class="progress-bar" style="width: 200px; display: inline-block;">
-                                <div class="progress-fill" style="width: 75%;"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <ul class="checklist">
-                        <li class="checklist-item">
-                            <input type="checkbox" class="checkbox" checked>
-                            <span class="checklist-text completed">Vérifier le montant total du chiffre d'affaires du chantier</span>
-                            <span class="badge badge-success">Validé</span>
-                        </li>
-                        <li class="checklist-item">
-                            <input type="checkbox" class="checkbox" checked>
-                            <span class="checklist-text completed">Vérifier la nature des travaux (neuf, rénovation, entretien)</span>
-                            <span class="badge badge-success">Validé</span>
-                        </li>
-                        <li class="checklist-item">
-                            <input type="checkbox" class="checkbox" checked>
-                            <span class="checklist-text completed">Collecter les factures de sous-traitance</span>
-                            <span class="badge badge-success">Validé</span>
-                        </li>
-                        <li class="checklist-item">
-                            <input type="checkbox" class="checkbox">
-                            <span class="checklist-text">Vérifier les attestations fiscales des sous-traitants</span>
-                            <span class="badge badge-warning">En cours</span>
-                        </li>
-                        <li class="checklist-item">
-                            <input type="checkbox" class="checkbox">
-                            <span class="checklist-text">Calculer le ratio acomptes/CA (si > 50%, alerte fiscale)</span>
-                            <span class="badge badge-danger">À faire</span>
-                        </li>
-                        <li class="checklist-item">
-                            <input type="checkbox" class="checkbox">
-                            <span class="checklist-text">Vérifier les retenues de garantie et leur traitement fiscal</span>
-                            <span class="badge badge-danger">À faire</span>
-                        </li>
-                        <li class="checklist-item">
-                            <input type="checkbox" class="checkbox" checked>
-                            <span class="checklist-text completed">S'assurer de la cohérence des dates de facturation</span>
-                            <span class="badge badge-success">Validé</span>
-                        </li>
-                        <li class="checklist-item">
-                            <input type="checkbox" class="checkbox">
-                            <span class="checklist-text">Vérifier l'application correcte de la TVA selon le type de travaux</span>
-                            <span class="badge badge-warning">En cours</span>
-                        </li>
-                    </ul>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h1>Guidage fiscal</h1>
+                    <select id="guidageChantierSelect" class="form-select" style="max-width: 300px;">
+                        <option value="">Sélectionner un chantier...</option>
+                        <!-- Rempli par JS -->
+                    </select>
                 </div>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <i class="fas fa-question-circle"></i>
-                            Questions de guidage
-                        </h2>
+                <div id="guidage-content" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <i class="fas fa-clipboard-check"></i>
+                                Check-list fiscale - <span id="guidageChantierName"></span>
+                            </h2>
+                            <div>
+                                <span style="margin-right: 1rem;" id="guidageProgressText">Progression: 0%</span>
+                                <div class="progress-bar" style="width: 200px; display: inline-block;">
+                                    <div id="guidageProgressBar" class="progress-fill" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <ul class="checklist" id="guidageChecklist">
+                            <!-- Check-list générée dynamiquement -->
+                        </ul>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Ce chantier a-t-il généré des acomptes supérieurs à 50% du CA total ?</label>
-                        <select class="form-select">
-                            <option>Sélectionner...</option>
-                            <option>Oui</option>
-                            <option>Non</option>
-                        </select>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">
+                                <i class="fas fa-lightbulb"></i>
+                                Recommandations & Alertes
+                            </h2>
+                        </div>
+                        <div id="guidageRecommendations" style="padding: 1rem;">
+                            <!-- Recommandations générées dynamiquement -->
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Le chantier fait-il appel à de la sous-traitance ?</label>
-                        <select class="form-select">
-                            <option>Sélectionner...</option>
-                            <option>Oui</option>
-                            <option>Non</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Type de travaux réalisés</label>
-                        <select class="form-select">
-                            <option>Sélectionner...</option>
-                            <option>Construction neuve</option>
-                            <option>Rénovation lourde</option>
-                            <option>Rénovation légère</option>
-                            <option>Entretien</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-primary">
-                        <i class="fas fa-save"></i>
-                        Enregistrer les réponses
-                    </button>
+                </div>
+
+                <div id="guidage-empty" class="card" style="text-align: center; padding: 3rem;">
+                    <i class="fas fa-hard-hat" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 1rem;"></i>
+                    <p>Veuillez sélectionner un chantier pour accéder au guidage fiscal personnalisé.</p>
                 </div>
             </section>
 
@@ -465,11 +377,29 @@
                         <input id="chantierDateDebut" type="date" class="form-input" required>
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Nature des travaux</label>
+                        <select id="chantierNature" name="nature" class="form-select">
+                            <option value="neuf">Construction neuve</option>
+                            <option value="renovation">Rénovation (> 2 ans)</option>
+                            <option value="renovation_energetique">Rénovation énergétique</option>
+                            <option value="entretien">Entretien / Réparation</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Type de Client</label>
+                        <select id="chantierTypeClient" name="typeClient" class="form-select">
+                            <option value="prive">Privé (Particulier/Entr.)</option>
+                            <option value="public">Public (État/Collectivité)</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="form-group">
-                    <label class="form-label">Type de travaux</label>
-                    <select id="chantierType" class="form-select">
-                        <option>Neuf</option>
-                        <option>Rénovation</option>
+                    <label class="form-label">Rôle de l'entreprise</label>
+                    <select id="chantierRole" name="role" class="form-select">
+                        <option value="principale">Entreprise Principale</option>
+                        <option value="sous-traitant">Sous-traitant</option>
                     </select>
                 </div>
                 <div style="display: flex; gap: 1rem; justify-content: flex-end;">
@@ -508,6 +438,12 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <!-- Scripts chargés séquentiellement pour compatibilité locale (sans module ES6) -->
+    <script src="js/modules/fiscalRules.js"></script>
+    <script src="js/modules/chantiers.js"></script>
+    <script src="js/modules/ui.js"></script>
+    <script src="js/modules/dashboard.js"></script>
+    <script src="js/modules/calendar.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>

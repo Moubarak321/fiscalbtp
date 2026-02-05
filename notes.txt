@@ -1,0 +1,33 @@
+Architecture des fichiers ( js/modules/ )
+
+- fiscalRules.js : Moteur de règles fiscales . Gère la TVA (normale, réduite, autoliquidation), la retenue de garantie, et calcule le score de risque fiscal.
+- chantiers.js : Gestion des données des chantiers (CRUD) et intégration avec le moteur fiscal pour mettre à jour les statuts automatiquement.
+- dashboard.js : Tableau de bord intelligent . Calcule les KPI (Conformité, Alertes) et affiche les actions prioritaires basées sur l'analyse de risque.
+- calendar.js : Calendrier fiscal . Génère les échéances (TVA, factures d'acompte) en fonction des données des chantiers.
+- ui.js : Gestion de l'interface utilisateur (Modals, Navigation, Tableaux).
+- main.js : Point d'entrée qui initialise tous les modules.
+Nouvelles Fonctionnalités
+
+1. Moteur de Règles Fiscales BTP :
+   
+   - Détection automatique de l' Autoliquidation si le rôle est "Sous-traitant".
+   - Application des taux de TVA selon la nature des travaux (Neuf 20%, Rénovation 10%, Énergétique 5.5%).
+   - Alerte sur les Acomptes trop élevés (>40%).
+   - Détection du besoin de Retenue de garantie pour les marchés privés/publics.
+2. Tableau de Bord des Risques :
+   
+   - Les indicateurs (Chantiers actifs, Alertes, Conformité) sont maintenant dynamiques.
+   - La section "Actions prioritaires" remonte automatiquement les chantiers à risque élevé (ex: Autoliquidation sans attestation).
+3. Calendrier Fiscal :
+   
+   - Le tableau des échéances est généré dynamiquement.
+   - Il inclut les dates prévisionnelles de déclaration de TVA et les validations d'acomptes.
+Modifications HTML
+
+- Le formulaire de création de chantier inclut désormais : Nature des travaux , Type de Client (Public/Privé), et Rôle (Principale/Sous-traitant) pour alimenter le moteur fiscal.
+- L'application utilise désormais <script type="module" src="js/main.js"> .
+Références
+
+- fiscalRules.js
+- dashboard.js
+- ui.js
