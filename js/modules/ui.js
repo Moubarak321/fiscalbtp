@@ -1,3 +1,144 @@
+// Gestion documentaire avancée (upload, archivage, checklist)
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('documentUploadInput');
+    if (input) {
+        input.addEventListener('change', function(e) {
+            let docs = JSON.parse(localStorage.getItem('btp_documents') || '[]');
+            Array.from(e.target.files).forEach(f => {
+                docs.push({
+                    name: f.name,
+                    type: f.type,
+                    size: f.size,
+                    date: new Date().toLocaleDateString('fr-FR'),
+                    content: null // Pour démo, pas de stockage binaire
+                });
+            });
+            localStorage.setItem('btp_documents', JSON.stringify(docs));
+            window.renderDocumentsTable && window.renderDocumentsTable();
+            input.value = '';
+        });
+    }
+    window.renderDocumentsTable = function() {
+        const tbody = document.getElementById('documentsTableBody');
+        if (!tbody) return;
+        let docs = JSON.parse(localStorage.getItem('btp_documents') || '[]');
+        if (!docs.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="color:#888;">Aucun document importé.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = docs.map((d, i) => `
+            <tr>
+                <td>${d.name}</td>
+                <td>${d.type || 'Fichier'}</td>
+                <td>${d.date}</td>
+                <td>${(d.size/1024).toFixed(1)} KB</td>
+                <td><button class="action-btn" onclick="window.deleteDocument && window.deleteDocument(${i})"><i class="fas fa-trash"></i></button></td>
+            </tr>
+        `).join('');
+    };
+    window.deleteDocument = function(idx) {
+        let docs = JSON.parse(localStorage.getItem('btp_documents') || '[]');
+        docs.splice(idx,1);
+        localStorage.setItem('btp_documents', JSON.stringify(docs));
+        window.renderDocumentsTable && window.renderDocumentsTable();
+    };
+    window.renderDocumentsTable && window.renderDocumentsTable();
+});
+// Filtrage avancé dashboard/calendrier
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('globalSearchInput');
+    if (input) {
+        input.addEventListener('input', function(e) {
+            const val = e.target.value.toLowerCase();
+            // Filtrage dashboard
+            if (window.DashboardModule && typeof DashboardModule.renderStats === 'function') {
+                window.DashboardModule.renderStats(val);
+            }
+            // Filtrage calendrier
+            if (window.CalendarModule && typeof CalendarModule.renderEcheances === 'function') {
+                window.CalendarModule.renderEcheances(val);
+            }
+        });
+    }
+});
+// Export CSV des alertes dynamiques et historiques
+window.exportAlertesCSV = function() {
+    let alertes = [];
+    try {
+        // Récupérer alertes dynamiques
+        if (window.UIModule && typeof window.UIModule.renderAlertesDyn === 'function') {
+            const chantiers = window.ChantiersModule ? ChantiersModule.getAll() : [];
+            chantiers.forEach(c => {
+                if (c.analyseRisque && Array.isArray(c.analyseRisque.alertes)) {
+                    c.analyseRisque.alertes.forEach(a => {
+                        alertes.push({
+                            type: 'danger',
+                            titre: `Alerte fiscale - ${c.nom}`,
+                            message: a,
+                            chantier: c.nom
+                        });
+                    });
+                }
+            });
+        }
+        // Ajout historique
+        let historique = JSON.parse(localStorage.getItem('btp_alertes_historique') || '[]');
+        historique.forEach(h => {
+            alertes.push({
+                type: h.type,
+                titre: h.titre,
+                message: h.message,
+                chantier: h.chantierId || ''
+            });
+        });
+    } catch(e) {}
+    if (!alertes.length) { alert('Aucune alerte à exporter.'); return; }
+    let csv = 'Type;Titre;Message;Chantier\n';
+    alertes.forEach(a => {
+        csv += `${a.type};${a.titre.replace(/;/g,',')};${a.message.replace(/;/g,',')};${a.chantier}\n`;
+    });
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'alertes_fiscales.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);}, 100);
+};
+
+// Export CSV du calendrier fiscal
+window.exportCalendarCSV = function() {
+    if (!window.FiscalRules || !window.ChantiersModule) return;
+    let rows = [];
+    const chantiers = ChantiersModule.getAll();
+    chantiers.forEach(c => {
+        const echeances = FiscalRules.genererEcheances(c);
+        echeances.forEach(e => {
+            rows.push({
+                chantier: c.nom,
+                type: e.type,
+                date: e.date ? new Date(e.date).toLocaleDateString('fr-FR') : '',
+                montant: e.montant,
+                statut: e.statut,
+                description: e.description || ''
+            });
+        });
+    });
+    if (!rows.length) { alert('Aucune échéance à exporter.'); return; }
+    let csv = 'Chantier;Type;Date;Montant;Statut;Description\n';
+    rows.forEach(r => {
+        csv += `${r.chantier};${r.type.replace(/;/g,',')};${r.date};${r.montant};${r.statut};${r.description.replace(/;/g,',')}\n`;
+    });
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'calendrier_fiscal.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);}, 100);
+};
 window.UIModule = {
     state: {
         editingId: null,
@@ -11,6 +152,98 @@ window.UIModule = {
         this.setupGlobalHelpers();
         this.setupChantierUI();
         this.setupGuidageUI();
+        this.renderAlertesDyn();
+        window.addEventListener('chantiersUpdated', () => this.renderAlertesDyn());
+    },
+    /**
+     * Affiche dynamiquement les alertes réelles dans l'onglet Alertes
+     */
+    renderAlertesDyn() {
+        const container = document.getElementById('alertes-dyn-container');
+        if (!container) return;
+
+        const chantiers = window.ChantiersModule ? ChantiersModule.getAll() : [];
+        let alertes = [];
+
+        // 1. Alertes fiscales (analyseRisque.alertes)
+        chantiers.forEach(c => {
+            if (c.analyseRisque && Array.isArray(c.analyseRisque.alertes)) {
+                c.analyseRisque.alertes.forEach(a => {
+                    alertes.push({
+                        type: 'danger',
+                        icon: 'fa-exclamation-triangle',
+                        titre: `Alerte fiscale - ${c.nom}`,
+                        message: a,
+                        chantierId: c.id
+                    });
+                });
+            }
+        });
+
+        // 2. Échéances dépassées (retard)
+        if (window.FiscalRules && window.CalendarModule) {
+            chantiers.forEach(c => {
+                const echeances = FiscalRules.genererEcheances(c);
+                echeances.forEach(e => {
+                    if (e.date && new Date(e.date) < new Date() && e.statut !== 'valide') {
+                        alertes.push({
+                            type: 'danger',
+                            icon: 'fa-calendar-times',
+                            titre: `Échéance dépassée - ${c.nom}`,
+                            message: `${e.type} - ${e.description || ''} (${new Date(e.date).toLocaleDateString('fr-FR')})`,
+                            chantierId: c.id
+                        });
+                    }
+                });
+            });
+        }
+
+        // 3. Alertes de niveau moyen (warning)
+        chantiers.forEach(c => {
+            if (c.analyseRisque && c.analyseRisque.niveau === 'moyen') {
+                alertes.push({
+                    type: 'warning',
+                    icon: 'fa-exclamation-circle',
+                    titre: `Risque à surveiller - ${c.nom}`,
+                    message: c.analyseRisque.alertes[0] || 'Risque fiscal à surveiller',
+                    chantierId: c.id
+                });
+            }
+        });
+
+        // Affichage
+        let html = '';
+        if (alertes.length === 0) {
+            html = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Aucune alerte critique détectée sur vos chantiers.</div>';
+        } else {
+            html += `<div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-exclamation-circle"></i>
+                    Alertes critiques
+                </h2>
+                <span class="badge badge-danger">${alertes.length} alerte${alertes.length > 1 ? 's' : ''}</span>
+            </div>`;
+            alertes.forEach((a, idx) => {
+                let extraBtn = '';
+                if (a.icon === 'fa-calendar-times') {
+                    extraBtn = `<button class=\"btn btn-warning\" style=\"margin-top:0.5rem; margin-left:0.5rem;\" onclick=\"window.simulateEmailAlerte && window.simulateEmailAlerte('${a.titre.replace(/'/g, "&#39;")}','${a.message.replace(/'/g, "&#39;")}')\"><i class=\"fas fa-envelope\"></i> Notifier par email</button>`;
+                }
+                html += `<div class=\"alert alert-${a.type}\">\n` +
+                    `<i class=\"fas ${a.icon}\"></i>\n` +
+                    `<div style=\"flex:1;\">\n` +
+                        `<strong>${a.titre}</strong>\n` +
+                        `<p>${a.message}</p>\n` +
+                        `<button class=\"btn btn-secondary\" style=\"margin-top:0.5rem;\" onclick=\"window.viewChantierDetails && window.viewChantierDetails(${a.chantierId})\">Voir chantier</button>\n` +
+                        extraBtn +
+                    `</div>\n` +
+                `</div>`;
+            });
+        // Simulation notification email pour échéances critiques
+        window.simulateEmailAlerte = function(titre, message) {
+            alert('Notification email envoyée !\n\nObjet : ' + titre + '\n' + message);
+        };
+        }
+        container.innerHTML = html;
     },
 
     setupNavigation() {

@@ -20,35 +20,42 @@ window.FiscalRules = {
             };
         }
 
-        // Règle 2: Rénovation énergétique (5.5%)
+        // Récupérer les taux personnalisés depuis le module CustomRules
+        const customTVA = window.CustomRulesModule && typeof CustomRulesModule.getCustomTVA === 'function' 
+            ? CustomRulesModule.getCustomTVA() 
+            : {};
+        const defaultTVA = { neuf: 20, renovation: 10, renovation_energetique: 5.5 };
+        const tvaMap = { ...defaultTVA, ...customTVA };
+
+        // Règle 2: Rénovation énergétique
         // Locaux d'habitation achevés depuis > 2 ans + travaux éligibles
         if (chantier.nature === 'renovation_energetique') {
             return {
                 code: 'TVA_REDUITE_5_5',
-                taux: 5.5,
+                taux: tvaMap.renovation_energetique,
                 autoliquidation: false,
-                justification: "TVA à taux réduit 5.5% - Travaux d'amélioration énergétique (locaux > 2 ans)"
+                justification: `TVA à taux réduit ${tvaMap.renovation_energetique}% - Travaux d'amélioration énergétique (locaux > 2 ans)`
             };
         }
 
-        // Règle 3: Rénovation habitat > 2 ans (10%)
+        // Règle 3: Rénovation habitat > 2 ans
         // Amélioration, transformation, aménagement, entretien
         if (chantier.nature === 'renovation' || chantier.nature === 'entretien') {
             return {
                 code: 'TVA_INTERMEDIAIRE_10',
-                taux: 10,
+                taux: tvaMap.renovation,
                 autoliquidation: false,
-                justification: "TVA intermédiaire 10% - Travaux d'amélioration/entretien logement > 2 ans"
+                justification: `TVA intermédiaire ${tvaMap.renovation}% - Travaux d'amélioration/entretien logement > 2 ans`
             };
         }
 
-        // Par défaut: TVA Normale (20%)
+        // Par défaut: TVA Normale
         // Construction neuve, locaux commerciaux, surélévation, ou rénovation < 2 ans
         return {
             code: 'TVA_NORMALE_20',
-            taux: 20,
+            taux: tvaMap.neuf,
             autoliquidation: false,
-            justification: "TVA normale 20% - Construction neuve ou locaux commerciaux"
+            justification: `TVA normale ${tvaMap.neuf}% - Construction neuve ou locaux commerciaux`
         };
     },
 
@@ -86,16 +93,23 @@ window.FiscalRules = {
 
         const docs = chantier.documents || [];
 
+        // Récupérer les seuils personnalisés
+        const customThresholds = window.CustomRulesModule && typeof CustomRulesModule.getCustomThresholds === 'function'
+            ? CustomRulesModule.getCustomThresholds()
+            : {};
+        const thresholdAcompte = customThresholds.thresholdAcompte || 30;
+        const thresholdURSSAF = customThresholds.thresholdURSSAF || 5000;
+
         // --- 1. Risque TVA & Facturation ---
         
         // Risque Acomptes élevés sans facture correspondante
-        if (chantier.acomptesPourcentage > 30) {
+        if (chantier.acomptesPourcentage > thresholdAcompte) {
             // Dans le BTP, de gros acomptes sans avancement prouvé peuvent être risqués (TVA exigible à l'encaissement pour prestataires services)
             // Note: Pour les livraisons de biens, TVA à la livraison. Pour services/travaux, TVA à l'encaissement.
             // Si on n'a pas la facture d'acompte, c'est un problème.
             if (!docs.includes('facture_acompte')) {
                 score += 15;
-                alertes.push("Acomptes > 30% sans facture d'acompte archivée");
+                alertes.push(`Acomptes > ${thresholdAcompte}% sans facture d'acompte archivée`);
             }
         }
         if (chantier.acomptesPourcentage > 50) {
@@ -124,10 +138,10 @@ window.FiscalRules = {
 
         // --- 3. Risque Documents Fiscaux ---
         
-        // Attestation de vigilance URSSAF (tous les 6 mois si > 5000€)
-        if (chantier.budget >= 5000 && !docs.includes('attestation_urssaf')) {
+        // Attestation de vigilance URSSAF (tous les 6 mois si > seuil personnalisé)
+        if (chantier.budget >= thresholdURSSAF && !docs.includes('attestation_urssaf')) {
             score += 20;
-            alertes.push("Attestation de vigilance URSSAF manquante (Obligatoire > 5000€)");
+            alertes.push(`Attestation de vigilance URSSAF manquante (Obligatoire > ${thresholdURSSAF}€)`);
         }
         
         // Assurance Décennale

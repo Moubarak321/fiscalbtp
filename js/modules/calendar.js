@@ -4,8 +4,17 @@ window.CalendarModule = {
         window.addEventListener('chantiersUpdated', () => this.renderEcheances());
     },
 
-    renderEcheances() {
-        const chantiers = ChantiersModule.getAll();
+    renderEcheances(filter = '') {
+        let chantiers = ChantiersModule.getAll();
+        if (filter) {
+            const val = filter.toLowerCase();
+            chantiers = chantiers.filter(c =>
+                c.nom.toLowerCase().includes(val) ||
+                c.client.toLowerCase().includes(val) ||
+                (c.nature && c.nature.toLowerCase().includes(val)) ||
+                (c.statutFiscal && c.statutFiscal.toLowerCase().includes(val))
+            );
+        }
         const tbody = document.querySelector('#calendar-table tbody');
         if (!tbody) return;
 

@@ -6,23 +6,25 @@ window.DashboardModule = {
         this.renderStats();
     },
 
-    renderStats() {
-        const chantiers = ChantiersModule.getAll();
-        
+    renderStats(filter = '') {
+        let chantiers = ChantiersModule.getAll();
+        if (filter) {
+            const val = filter.toLowerCase();
+            chantiers = chantiers.filter(c =>
+                c.nom.toLowerCase().includes(val) ||
+                c.client.toLowerCase().includes(val) ||
+                (c.nature && c.nature.toLowerCase().includes(val)) ||
+                (c.statutFiscal && c.statutFiscal.toLowerCase().includes(val))
+            );
+        }
         // Calcul des indicateurs
         const totalChantiers = chantiers.length;
         const alertesEnCours = chantiers.filter(c => c.statutFiscal === 'danger' || c.statutFiscal === 'warning').length;
-        
-        // Calcul conformité (inverse du risque)
         const chantiersConformes = chantiers.filter(c => c.statutFiscal === 'success').length;
         const conformite = totalChantiers > 0 ? Math.round((chantiersConformes / totalChantiers) * 100) : 100;
-
-        // Mise à jour du DOM
         this.updateStatValue('stat-chantiers-actifs', totalChantiers);
         this.updateStatValue('stat-alertes', alertesEnCours);
         this.updateStatValue('stat-conformite', conformite + '%');
-        
-        // Générer la liste des actions prioritaires
         this.renderActionsPrioritaires(chantiers);
     },
 

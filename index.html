@@ -54,6 +54,10 @@
                     <i class="fas fa-file-alt"></i>
                     <span>Rapports</span>
                 </div>
+                <div class="nav-item" onclick="showSection('parametres', this)">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Paramètres fiscaux</span>
+                </div>
             </nav>
         </aside>
 
@@ -63,6 +67,9 @@
             <section id="dashboard" class="section active">
                 <h1 style="margin-bottom: 2rem;">Tableau de bord</h1>
                 
+                <div style="display:flex; gap:1rem; align-items:center; margin-bottom:1rem;">
+                    <input id="globalSearchInput" type="text" class="form-input" placeholder="Filtrer par chantier, client, type, statut..." style="max-width:350px;">
+                </div>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-header">
@@ -243,45 +250,29 @@
             <section id="alertes" class="section">
                 <h1 style="margin-bottom: 2rem;">Alertes et notifications</h1>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">
-                            <i class="fas fa-exclamation-circle"></i>
-                            Alertes critiques
-                        </h2>
-                        <span class="badge badge-danger">3 alertes</span>
-                    </div>
-                    <div class="alert alert-danger">
-                        <i class="fas fa-file-excel"></i>
-                        <div style="flex: 1;">
-                            <strong>Documents manquants - Centre Commercial Nord</strong>
-                            <p>Attestation fiscale sous-traitant "Électricité Pro SARL" - Requis avant le 18/01/2026</p>
-                            <button class="btn btn-primary" style="margin-top: 0.5rem;">Demander le document</button>
-                        </div>
-                    </div>
-                    <div class="alert alert-danger">
-                        <i class="fas fa-calendar-times"></i>
-                        <div style="flex: 1;">
-                            <strong>Échéance dépassée - TVA sur acompte</strong>
-                            <p>Chantier "Bureaux Tech Park" - Déclaration en retard de 2 jours</p>
-                            <button class="btn btn-primary" style="margin-top: 0.5rem;">Régulariser maintenant</button>
-                        </div>
-                    </div>
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <div style="flex: 1;">
-                            <strong>Seuil de TVA proche</strong>
-                            <p>Chantier "Résidence Les Jardins" - 90% du seuil atteint</p>
-                            <button class="btn btn-secondary" style="margin-top: 0.5rem;">Voir détails</button>
-                        </div>
-                    </div>
+                <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                    <button class="btn btn-outline" onclick="window.exportAlertesCSV && window.exportAlertesCSV()"><i class="fas fa-file-csv"></i> Exporter Alertes (CSV)</button>
                 </div>
+                <div class="card" id="alertes-dyn-container">
+                    <!-- Alertes dynamiques générées par JS -->
+                </div>
+                    <div class="card" id="alertes-historique-container" style="margin-top:2rem;">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fas fa-history"></i> Historique des alertes et actions</h2>
+                        </div>
+                        <div id="alertes-historique-list" style="padding:1rem; color:#555;">
+                            <!-- Historique généré par JS -->
+                        </div>
+                    </div>
             </section>
 
             <!-- Documents Section (New) -->
             <section id="documents" class="section">
                 <h1 style="margin-bottom: 2rem;">Documents fiscaux</h1>
                 <div class="card">
+                    <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                        <button class="btn btn-outline" onclick="window.exportCalendarCSV && window.exportCalendarCSV()"><i class="fas fa-file-csv"></i> Exporter Calendrier (CSV)</button>
+                    </div>
                     <div class="card-header">
                         <h2 class="card-title"><i class="fas fa-folder"></i> Mes documents</h2>
                         <button class="btn btn-primary"><i class="fas fa-upload"></i> Importer</button>
@@ -338,6 +329,58 @@
                     <div style="height: 200px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-radius: 8px; color: var(--text-gray);">
                         <i class="fas fa-chart-area" style="font-size: 3rem; margin-right: 1rem;"></i>
                         <span>Graphique d'évolution (Placeholder)</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Paramètres Fiscaux Section -->
+            <section id="parametres" class="section">
+                <h1 style="margin-bottom: 2rem;">Paramètres fiscaux personnalisés</h1>
+                <div style="display:flex; gap:1rem; margin-bottom:1rem;">
+                    <button class="btn btn-outline" onclick="window.resetCustomRules && window.resetCustomRules()"><i class="fas fa-redo"></i> Réinitialiser par défaut</button>
+                    <button class="btn btn-success" onclick="window.loadCustomRulesForm && window.loadCustomRulesForm()"><i class="fas fa-upload"></i> Charger config</button>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-percent"></i> Taux de TVA par nature de chantier</h2>
+                    </div>
+                    <div style="padding:1rem;">
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem;">
+                            <div>
+                                <label style="display:block; margin-bottom:0.5rem;"><strong>Neuf (20%)</strong></label>
+                                <input id="tva-neuf" type="number" class="form-input" min="0" max="100" step="0.5" placeholder="20">
+                                <small>TVA normale pour construction neuve</small>
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:0.5rem;"><strong>Rénovation (10%)</strong></label>
+                                <input id="tva-renovation" type="number" class="form-input" min="0" max="100" step="0.5" placeholder="10">
+                                <small>TVA intermédiaire</small>
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:0.5rem;"><strong>Rénovation énergétique (5.5%)</strong></label>
+                                <input id="tva-renovation-energetique" type="number" class="form-input" min="0" max="100" step="0.5" placeholder="5.5">
+                                <small>TVA réduite</small>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" style="margin-top:1rem;" onclick="window.saveCustomRules && window.saveCustomRules()"><i class="fas fa-save"></i> Enregistrer les taux</button>
+                    </div>
+                </div>
+                <div class="card" style="margin-top:2rem;">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-clipboard-list"></i> Seuils d'alerte</h2>
+                    </div>
+                    <div style="padding:1rem;">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                            <div>
+                                <label style="display:block; margin-bottom:0.5rem;"><strong>Budget minimum pour URSSAF (€)</strong></label>
+                                <input id="threshold-urssaf" type="number" class="form-input" min="0" step="100" placeholder="5000">
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:0.5rem;"><strong>Taux d'acompte maximum sans alerte (%)</strong></label>
+                                <input id="threshold-acompte" type="number" class="form-input" min="0" max="100" step="5" placeholder="30">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" style="margin-top:1rem;" onclick="window.saveCustomThresholds && window.saveCustomThresholds()"><i class="fas fa-save"></i> Enregistrer les seuils</button>
                     </div>
                 </div>
             </section>
@@ -440,6 +483,7 @@
 
     <!-- Scripts chargés séquentiellement pour compatibilité locale (sans module ES6) -->
     <script src="js/modules/fiscalRules.js"></script>
+    <script src="js/modules/customRules.js"></script>
     <script src="js/modules/chantiers.js"></script>
     <script src="js/modules/ui.js"></script>
     <script src="js/modules/dashboard.js"></script>

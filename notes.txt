@@ -31,3 +31,49 @@ Références
 - fiscalRules.js
 - dashboard.js
 - ui.js
+
+
+
+----------------------------------------------------------
+
+
+ Nouvelle Interface de Paramètres Fiscaux
+1. Module CustomRulesModule (customRules.js)
+Stockage local des paramètres personnalisés
+Fonctions de sauvegarde/lecture des taux de TVA et seuils
+Export configuration en JSON
+Réinitialisation par défaut
+2. Page de Paramètres dans l'Interface
+Access via le menu latéral "Paramètres fiscaux" avec :
+
+🏠 Taux de TVA personnalisables :
+
+Néuf : 20% (éditable)
+Rénovation : 10% (éditable)
+Rénovation énergétique : 5.5% (éditable)
+⚠️ Seuils d'alerte ajustables :
+Budget minimum URSSAF (défaut 5000€)
+Taux d'acompte maximum sans alerte (défaut 30%)
+3. Intégration avec FiscalRules
+determinerRegimeTVA() utilise désormais les taux personnalisés
+analyserRisque() utilise les seuils d'alerte personnalisés
+Les changements se répercutent automatiquement sur tous les chantiers
+4. Fonctionnalités
+✅ Éditer les règles fiscales sans redémarrer
+✅ Exporter la configuration (JSON)
+✅ Réinitialiser par défaut
+✅ Recalcul automatique des statuts fiscaux après modification
+
+Tous les paramètres sont stockés en localStorage et persistent après fermeture du navigateur.
+
+Votre application FiscalBTP Pro est maintenant complète avec :
+
+✅ Moteur de règles fiscales BTP
+✅ Dashboard de risque fiscal temps réel
+✅ Calendrier fiscal intelligent avec alertes
+✅ Historique et audit des alertes
+✅ Export CSV des données
+✅ Notifications email simulées
+✅ Filtrage avancé
+✅ Gestion documentaire
+✅ Personnalisation des règles fiscales
