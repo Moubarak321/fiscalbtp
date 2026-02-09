@@ -117,15 +117,22 @@ window.FiscalRules = {
             alertes.push("Acomptes très élevés (>50%) : risque de requalification ou trésorerie");
         }
 
-        // --- 2. Risque Sous-traitance (Loi 1975) ---
+        // --- Incohérence Nature vs TVA (Requalification) ---
+        const regimeAttendu = this.determinerRegimeTVA(chantier);
+        if (regimeAttendu.taux < 20 && !regimeAttendu.autoliquidation) {
+             // Si on s'attend à du 10% ou 5.5% mais qu'on a pas l'attestation, c'est une incohérence majeure
+             if (!docs.includes('attestation_tva_reduite')) {
+                 score += 25;
+                 alertes.push(`Incohérence TVA : Nature "${chantier.nature}" requiert une attestation pour le taux ${regimeAttendu.taux}%`);
+             }
+        }
+
+        // --- 2. Risque Sous-traitance (Loi 1975) & Marchés Publics ---
         
         if (chantier.role === 'principale' && chantier.budget > 100000) {
-            // Suppose qu'un gros chantier a probablement des sous-traitants
-            // Ceci est une heuristique pour la démo
             recommendations.push("Vérifier si recours à sous-traitance (obligation d'acceptation par le maître d'ouvrage)");
         }
 
-        // Si on est sous-traitant, on doit avoir un contrat
         if (chantier.role === 'sous-traitant') {
             if (!docs.includes('contrat_sous_traitance')) {
                 score += 25;
@@ -134,9 +141,13 @@ window.FiscalRules = {
             if (!docs.includes('caution_bancaire') && !docs.includes('delegation_paiement')) {
                 recommendations.push("Vérifier garantie de paiement (Caution ou Délégation)");
             }
+            // Spécifique Marchés Publics
+            if (chantier.typeClient === 'public') {
+                recommendations.push("Marché Public : Vérifier le droit au paiement direct par le maître d'ouvrage");
+            }
         }
 
-        // --- 3. Risque Documents Fiscaux ---
+        // --- 3. Risque Documents Fiscaux & Retards Déclaratifs ---
         
         // Attestation de vigilance URSSAF (tous les 6 mois si > seuil personnalisé)
         if (chantier.budget >= thresholdURSSAF && !docs.includes('attestation_urssaf')) {
@@ -148,6 +159,17 @@ window.FiscalRules = {
         if (!docs.includes('assurance_decennale')) {
             score += 30; // Très grave
             alertes.push("Attestation Assurance Décennale manquante");
+        }
+
+        // Intégration des retards depuis le calendrier
+        const echeances = this.genererEcheances(chantier);
+        const retards = echeances.filter(e => e.statut === 'retard' || e.statut === 'urgent');
+        
+        if (retards.length > 0) {
+            score += 15 * retards.length; // Pénalité forte par retard
+            retards.forEach(r => {
+                alertes.push(`Retard Déclaratif : ${r.type} (${r.description})`);
+            });
         }
 
         // --- 4. Risque Autoliquidation ---
@@ -187,56 +209,84 @@ window.FiscalRules = {
     genererEcheances(chantier) {
         const echeances = [];
         const today = new Date();
-        const start = new Date(chantier.dateDebut);
+        const start = chantier.dateDebut ? new Date(chantier.dateDebut) : new Date();
         const regime = this.determinerRegimeTVA(chantier);
 
-        // 1. Déclaration TVA (Mensuelle par défaut)
-        // On génère la prochaine
-        let nextTvaDate = new Date();
-        nextTvaDate.setDate(19); // Le 19 du mois
-        if (nextTvaDate < today) {
-            nextTvaDate.setMonth(nextTvaDate.getMonth() + 1);
+        // 1. Déclaration TVA (Mensuelle par défaut) -> prochaine date au 19
+        let nextTvaDate = new Date(today.getFullYear(), today.getMonth(), 19);
+        if (nextTvaDate < today) nextTvaDate = new Date(today.getFullYear(), today.getMonth() + 1, 19);
+
+        const taux = regime && regime.taux ? regime.taux : 20;
+        const estimatedTVA = Math.round((chantier.budget || 0) * (taux / 100) * ((chantier.acomptesPourcentage || 0) / 100));
+
+        echeances.push({
+            type: regime.autoliquidation ? 'Déclaration TVA (Autoliquidation)' : 'Déclaration TVA',
+            date: nextTvaDate,
+            montant: regime.autoliquidation ? 'N/A (Autoliquidation)' : (estimatedTVA > 0 ? estimatedTVA + ' €' : '0 €'),
+            statut: (nextTvaDate < today) ? 'urgent' : 'a_venir',
+            priority: (nextTvaDate - today <= 3 * 24 * 3600 * 1000) ? 'critical' : ((nextTvaDate - today <= 14 * 24 * 3600 * 1000) ? 'important' : 'info'),
+            description: regime.justification || ''
+        });
+
+        // 2. Acompte client (rappel au démarrage + 15 jours)
+        if (chantier.acomptesPourcentage && chantier.acomptesPourcentage > 0) {
+            const acompteDate = new Date(start);
+            acompteDate.setDate(acompteDate.getDate() + 15);
+            const montantAcompte = Math.round((chantier.budget || 0) * (chantier.acomptesPourcentage / 100));
+            echeances.push({
+                type: 'Acompte client',
+                date: acompteDate,
+                montant: montantAcompte + ' €',
+                statut: (acompteDate < today) ? 'retard' : 'a_venir',
+                priority: (acompteDate - today <= 7 * 24 * 3600 * 1000) ? 'important' : 'info',
+                description: `Acompte ${chantier.acomptesPourcentage}% à prévoir`
+            });
         }
 
-        if (regime.autoliquidation) {
-            echeances.push({
-                type: 'Déclaration TVA (Autoliquidation)',
-                date: nextTvaDate,
-                montant: 'N/A (Ligne 3B)',
-                statut: 'avenir',
-                priorite: 'haute',
-                description: "Reporter le montant HT en ligne 'Autres opérations non imposables'"
-            });
-        } else {
-            echeances.push({
-                type: 'Déclaration TVA',
-                date: nextTvaDate,
-                montant: Math.round(chantier.budget * (regime.taux / 100) * 0.1) + ' € (Est.)', // 10% du budget par mois est.
-                statut: 'avenir',
-                priorite: 'haute',
-                description: `Déclarer la TVA collectée à ${regime.taux}%`
-            });
-        }
-
-        // 2. Acompte IS (si société) - Générique pour l'exemple
-        // 15 mars, 15 juin, 15 sept, 15 dec
-        
-        // 3. Vérification Attestation URSSAF (Tous les 6 mois)
-        // Si date début > 6 mois, vérifier renouvellement
+        // 3. Vérification attestation URSSAF (tous les 6 mois)
         const sixMonthsLater = new Date(start);
         sixMonthsLater.setMonth(start.getMonth() + 6);
-        
         if (sixMonthsLater < today) {
-             echeances.push({
-                type: 'Renouvellement URSSAF',
-                date: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7), // Urgent
+            const missing = !(chantier.documents || []).includes('attestation_urssaf');
+            echeances.push({
+                type: 'Vérification URSSAF',
+                date: new Date(),
                 montant: '-',
-                statut: 'urgent',
-                priorite: 'haute',
-                description: "L'attestation de vigilance doit être renouvelée tous les 6 mois"
+                statut: missing ? 'urgent' : 'valide',
+                priority: missing ? 'important' : 'info',
+                description: missing ? 'Attestation URSSAF manquante ou à renouveler' : 'Attestation URSSAF OK'
             });
         }
 
+        // 4. Assurance décennale => échéance critique si manquante
+        if (!(chantier.documents || []).includes('assurance_decennale')) {
+            echeances.push({
+                type: 'Assurance Décennale',
+                date: new Date(),
+                montant: '-',
+                statut: 'urgent',
+                priority: 'critical',
+                description: 'Attestation décennale manquante'
+            });
+        }
+
+        // 5. Rappels génériques (Acomptes IS) - pour suivi
+        const year = today.getFullYear();
+        const isDates = [new Date(year,2,15), new Date(year,5,15), new Date(year,8,15), new Date(year,11,15)];
+        isDates.forEach(d => {
+            if (d >= today) {
+                echeances.push({
+                    type: 'Acompte IS',
+                    date: d,
+                    montant: '-',
+                    statut: 'a_venir',
+                    priority: 'info',
+                    description: 'Acompte IS (si applicable)'
+                });
+            }
+        });
+
+        echeances.sort((a,b) => a.date - b.date);
         return echeances;
     }
 };

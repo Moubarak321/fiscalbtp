@@ -44,13 +44,23 @@ window.CalendarModule = {
 
         // Rendu
         tbody.innerHTML = displayedEcheances.map(e => {
+            // Priorité (préférée) -> badge mapping
             let badgeClass = 'badge-primary';
-            if (e.statut === 'urgent') badgeClass = 'badge-danger';
-            if (e.statut === 'valide') badgeClass = 'badge-success';
-            
+            let badgeText = (e.statut || 'A_VENIR').toString().toUpperCase();
+
+            if (e.priority) {
+                if (e.priority === 'critical') { badgeClass = 'badge-danger'; badgeText = 'CRITIQUE'; }
+                else if (e.priority === 'important') { badgeClass = 'badge-warning'; badgeText = 'IMPORTANT'; }
+                else if (e.priority === 'info') { badgeClass = 'badge-primary'; badgeText = 'INFORMATIF'; }
+            } else {
+                // Fallback on statut legacy
+                if (e.statut === 'urgent') { badgeClass = 'badge-danger'; badgeText = 'URGENT'; }
+                if (e.statut === 'valide') { badgeClass = 'badge-success'; badgeText = 'VALIDE'; }
+            }
+
             // Formattage date
-            const dateStr = e.date.toLocaleDateString('fr-FR');
-            const isLate = e.date < new Date() && e.statut !== 'valide';
+            const dateStr = (e.date && typeof e.date.toLocaleDateString === 'function') ? e.date.toLocaleDateString('fr-FR') : e.date;
+            const isLate = (e.date instanceof Date ? e.date : new Date(e.date)) < new Date() && e.statut !== 'valide';
             const dateDisplay = isLate ? `<span style="color:red; font-weight:bold">${dateStr} (Retard)</span>` : dateStr;
 
             return `
@@ -62,7 +72,7 @@ window.CalendarModule = {
                 </td>
                 <td>${dateDisplay}</td>
                 <td>${e.montant}</td>
-                <td><span class="badge ${badgeClass}">${e.statut.toUpperCase()}</span></td>
+                <td><span class="badge ${badgeClass}">${badgeText}</span></td>
             </tr>
             `;
         }).join('');

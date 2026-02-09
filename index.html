@@ -400,86 +400,97 @@
             </div>
             <form id="newChantierForm">
                 <div class="form-group">
-                    <label class="form-label">Nom du chantier</label>
-                    <input id="chantierName" type="text" class="form-input" required>
+                    <label>Nom du chantier</label>
+                    <input type="text" name="nom" class="form-input" required>
                 </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Client</label>
-                        <input id="chantierClient" type="text" class="form-input" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Budget prévisionnel</label>
-                        <input id="chantierBudget" type="number" class="form-input" required>
-                    </div>
+                <div class="form-group">
+                    <label>Client</label>
+                    <input type="text" name="client" class="form-input" required>
                 </div>
-                <div class="form-row">
+                <div class="form-grid-2">
                     <div class="form-group">
-                        <label class="form-label">Acomptes (%)</label>
-                        <input id="chantierAcomptes" type="number" class="form-input" min="0" max="100" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Date de début</label>
-                        <input id="chantierDateDebut" type="date" class="form-input" required>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Nature des travaux</label>
-                        <select id="chantierNature" name="nature" class="form-select">
-                            <option value="neuf">Construction neuve</option>
-                            <option value="renovation">Rénovation (> 2 ans)</option>
-                            <option value="renovation_energetique">Rénovation énergétique</option>
-                            <option value="entretien">Entretien / Réparation</option>
+                        <label>Type de client</label>
+                        <select name="typeClient" class="form-select" required>
+                            <option value="prive">Privé (Particulier/Entreprise)</option>
+                            <option value="public">Marché Public</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Type de Client</label>
-                        <select id="chantierTypeClient" name="typeClient" class="form-select">
-                            <option value="prive">Privé (Particulier/Entr.)</option>
-                            <option value="public">Public (État/Collectivité)</option>
-                        </select>
+                        <label>Budget (€)</label>
+                        <input type="number" name="budget" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label>Acomptes prévus (%)</label>
+                        <input type="number" name="acomptesPourcentage" class="form-input" min="0" max="100" value="30">
+                    </div>
+                    <div class="form-group">
+                        <label>Date de début</label>
+                        <input type="date" name="dateDebut" class="form-input" required>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Rôle de l'entreprise</label>
-                    <select id="chantierRole" name="role" class="form-select">
+                    <label>Nature des travaux</label>
+                    <select name="nature" class="form-select" required>
+                        <option value="neuf">Construction Neuve (20%)</option>
+                        <option value="renovation">Rénovation / Amélioration (10%)</option>
+                        <option value="renovation_energetique">Rénovation Énergétique (5.5%)</option>
+                        <option value="entretien">Entretien / Réparation (10%)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Rôle de l'entreprise</label>
+                    <select name="role" class="form-select" required>
                         <option value="principale">Entreprise Principale</option>
                         <option value="sous-traitant">Sous-traitant</option>
                     </select>
                 </div>
-                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('newChantierModal')">Annuler</button>
-                    <button id="chantierSubmitBtn" type="submit" class="btn btn-primary">Créer le chantier</button>
+                <div style="margin-top: 1.5rem; text-align: right;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('newChantierModal')">Annuler</button>
+                    <button type="submit" id="chantierSubmitBtn" class="btn btn-primary">Créer le chantier</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- Modal Détails Chantier -->
     <div class="modal" id="chantierDetailsModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Détails du chantier</h2>
+                <h2 id="chantierDetailsName">Détails du Chantier</h2>
                 <button class="modal-close" onclick="closeModal('chantierDetailsModal')">&times;</button>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-info-circle"></i> Informations</h2>
+            <div style="padding: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <label style="font-weight: bold; display: block; margin-bottom: 0.3rem;">Client</label>
+                        <span id="chantierDetailsClient" style="color: #555;">-</span>
                     </div>
-                    <div style="padding: 1rem;">
-                        <p><strong>Nom:</strong> <span id="detailsName"></span></p>
-                        <p><strong>Client:</strong> <span id="detailsClient"></span></p>
-                        <p><strong>Budget:</strong> <span id="detailsBudget"></span></p>
-                        <p><strong>Acomptes:</strong> <span id="detailsAcomptes"></span></p>
-                        <p><strong>Date de début:</strong> <span id="detailsDateDebut"></span></p>
-                        <p><strong>Type:</strong> <span id="detailsType"></span></p>
-                        <p><strong>Statut fiscal:</strong> <span id="detailsStatut"></span></p>
+                    <div>
+                        <label style="font-weight: bold; display: block; margin-bottom: 0.3rem;">Budget</label>
+                        <span id="chantierDetailsBudget" style="color: #555;">-</span>
+                    </div>
+                    <div>
+                        <label style="font-weight: bold; display: block; margin-bottom: 0.3rem;">Nature</label>
+                        <span id="chantierDetailsNature" style="color: #555;">-</span>
+                    </div>
+                    <div>
+                        <label style="font-weight: bold; display: block; margin-bottom: 0.3rem;">Rôle</label>
+                        <span id="chantierDetailsRole" style="color: #555;">-</span>
+                    </div>
+                    <div>
+                        <label style="font-weight: bold; display: block; margin-bottom: 0.3rem;">Statut Fiscal</label>
+                        <span id="chantierDetailsStatut" class="badge">-</span>
                     </div>
                 </div>
-            </div>
-            <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1rem;">
-                <button class="btn btn-secondary" onclick="closeModal('chantierDetailsModal')">Fermer</button>
+                
+                <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                    <button class="btn btn-outline" onclick="closeModal('chantierDetailsModal')">Fermer</button>
+                    <button class="btn btn-primary" onclick="closeModal('chantierDetailsModal'); showSection('guidage');">
+                        <i class="fas fa-clipboard-check"></i> Aller au Guidage
+                    </button>
+                </div>
             </div>
         </div>
     </div>

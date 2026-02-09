@@ -54,9 +54,12 @@ window.DashboardModule = {
             html += `
             <div class="alert alert-danger">
                 <i class="fas fa-times-circle"></i>
-                <div>
+                <div style="flex:1;">
                     <strong>${c.nom}</strong>
-                    <p>${alerteMsg}</p>
+                    <p style="margin:0.2rem 0;">${alerteMsg}</p>
+                    <button class="btn btn-outline" style="margin-top:0.5rem; font-size:0.85em; padding: 0.3rem 0.6rem; background:white;" onclick="window.viewChantierDetails && window.viewChantierDetails(${c.id})">
+                        <i class="fas fa-search"></i> Voir détails
+                    </button>
                 </div>
             </div>
             `;

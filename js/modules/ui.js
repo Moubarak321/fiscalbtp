@@ -163,86 +163,180 @@ window.UIModule = {
         if (!container) return;
 
         const chantiers = window.ChantiersModule ? ChantiersModule.getAll() : [];
-        let alertes = [];
+        let alertesParRisque = { haut: [], moyen: [], bas: [] };
+        let echeancesDepassees = [];
 
-        // 1. Alertes fiscales (analyseRisque.alertes)
+        // 1. Alertes par niveau de risque fiscal
         chantiers.forEach(c => {
-            if (c.analyseRisque && Array.isArray(c.analyseRisque.alertes)) {
-                c.analyseRisque.alertes.forEach(a => {
-                    alertes.push({
-                        type: 'danger',
-                        icon: 'fa-exclamation-triangle',
-                        titre: `Alerte fiscale - ${c.nom}`,
-                        message: a,
-                        chantierId: c.id
+            if (c.analyseRisque && c.analyseRisque.niveau) {
+                const level = c.analyseRisque.niveau;
+                if (['haut', 'moyen', 'bas'].includes(level)) {
+                    alertesParRisque[level].push({
+                        chantier: c,
+                        niveau: c.analyseRisque.niveau,
+                        score: c.analyseRisque.score || 0,
+                        alertes: c.analyseRisque.alertes || [],
+                        recommendations: c.analyseRisque.recommendations || []
                     });
-                });
+                }
             }
         });
 
         // 2. Échéances dépassées (retard)
-        if (window.FiscalRules && window.CalendarModule) {
+        if (window.FiscalRules) {
             chantiers.forEach(c => {
                 const echeances = FiscalRules.genererEcheances(c);
                 echeances.forEach(e => {
-                    if (e.date && new Date(e.date) < new Date() && e.statut !== 'valide') {
-                        alertes.push({
-                            type: 'danger',
-                            icon: 'fa-calendar-times',
-                            titre: `Échéance dépassée - ${c.nom}`,
-                            message: `${e.type} - ${e.description || ''} (${new Date(e.date).toLocaleDateString('fr-FR')})`,
-                            chantierId: c.id
+                    if (e.date && new Date(e.date) < new Date() && (e.statut === 'urgent' || e.statut === 'retard')) {
+                        echeancesDepassees.push({
+                            chantier: c.nom,
+                            chantierId: c.id,
+                            type: e.type,
+                            description: e.description || '',
+                            date: new Date(e.date).toLocaleDateString('fr-FR'),
+                            priority: e.priority || 'important'
                         });
                     }
                 });
             });
         }
 
-        // 3. Alertes de niveau moyen (warning)
-        chantiers.forEach(c => {
-            if (c.analyseRisque && c.analyseRisque.niveau === 'moyen') {
-                alertes.push({
-                    type: 'warning',
-                    icon: 'fa-exclamation-circle',
-                    titre: `Risque à surveiller - ${c.nom}`,
-                    message: c.analyseRisque.alertes[0] || 'Risque fiscal à surveiller',
-                    chantierId: c.id
+        // Construction du HTML
+        let html = '';
+        const hasAlertes = alertesParRisque.haut.length + alertesParRisque.moyen.length + echeancesDepassees.length > 0;
+
+        if (!hasAlertes && alertesParRisque.bas.length === 0) {
+            html = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> <strong>Excellent !</strong> Aucune alerte critique détectée. Tous les chantiers sont conformes.</div>';
+        } else {
+            // Alertes de risque HAUT
+            if (alertesParRisque.haut.length > 0) {
+                html += `<div class="card-header" style="margin-top: 1rem;">
+                    <h2 class="card-title" style="color: var(--danger);">
+                        <i class="fas fa-times-circle"></i> Risque fiscal ÉLEVÉ
+                    </h2>
+                    <span class="badge badge-danger">${alertesParRisque.haut.length} chantier${alertesParRisque.haut.length > 1 ? 's' : ''}</span>
+                </div>`;
+                alertesParRisque.haut.forEach(item => {
+                    const { chantier, score, alertes, recommendations } = item;
+                    html += `<div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <div style="flex:1;">
+                            <strong>${chantier.nom}</strong>
+                            <div style="font-size: 0.9em; margin-top: 0.3rem; color: rgba(0,0,0,0.7);">
+                                Score de risque: <strong>${score}/100</strong>
+                            </div>`;
+                    if (alertes.length > 0) {
+                        html += `<div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(0,0,0,0.05); border-radius: 4px;">
+                            <strong style="font-size: 0.9em;">Problèmes détectés :</strong>
+                            <ul style="margin: 0.3rem 0; padding-left: 1.5rem; font-size: 0.9em;">`;
+                        alertes.forEach(a => {
+                            html += `<li>${a}</li>`;
+                        });
+                        html += `</ul></div>`;
+                    }
+                    if (recommendations.length > 0) {
+                        html += `<div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(16,185,129,0.05); border-radius: 4px;">
+                            <strong style="font-size: 0.9em; color: var(--secondary);">Actions recommandées :</strong>
+                            <ul style="margin: 0.3rem 0; padding-left: 1.5rem; font-size: 0.9em;">`;
+                        recommendations.forEach(r => {
+                            html += `<li><em>${r}</em></li>`;
+                        });
+                        html += `</ul></div>`;
+                    }
+                    html += `<div style="margin-top: 0.5rem;">
+                        <button class="btn btn-secondary" style="font-size: 0.85em;" onclick="window.viewChantierDetails && window.viewChantierDetails(${chantier.id})">
+                            <i class="fas fa-eye"></i> Détails
+                        </button>
+                    </div>
+                        </div>
+                    </div>`;
                 });
             }
-        });
 
-        // Affichage
-        let html = '';
-        if (alertes.length === 0) {
-            html = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Aucune alerte critique détectée sur vos chantiers.</div>';
-        } else {
-            html += `<div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-exclamation-circle"></i>
-                    Alertes critiques
-                </h2>
-                <span class="badge badge-danger">${alertes.length} alerte${alertes.length > 1 ? 's' : ''}</span>
-            </div>`;
-            alertes.forEach((a, idx) => {
-                let extraBtn = '';
-                if (a.icon === 'fa-calendar-times') {
-                    extraBtn = `<button class=\"btn btn-warning\" style=\"margin-top:0.5rem; margin-left:0.5rem;\" onclick=\"window.simulateEmailAlerte && window.simulateEmailAlerte('${a.titre.replace(/'/g, "&#39;")}','${a.message.replace(/'/g, "&#39;")}')\"><i class=\"fas fa-envelope\"></i> Notifier par email</button>`;
-                }
-                html += `<div class=\"alert alert-${a.type}\">\n` +
-                    `<i class=\"fas ${a.icon}\"></i>\n` +
-                    `<div style=\"flex:1;\">\n` +
-                        `<strong>${a.titre}</strong>\n` +
-                        `<p>${a.message}</p>\n` +
-                        `<button class=\"btn btn-secondary\" style=\"margin-top:0.5rem;\" onclick=\"window.viewChantierDetails && window.viewChantierDetails(${a.chantierId})\">Voir chantier</button>\n` +
-                        extraBtn +
-                    `</div>\n` +
-                `</div>`;
-            });
-        // Simulation notification email pour échéances critiques
-        window.simulateEmailAlerte = function(titre, message) {
-            alert('Notification email envoyée !\n\nObjet : ' + titre + '\n' + message);
-        };
+            // Alertes de risque MOYEN
+            if (alertesParRisque.moyen.length > 0) {
+                html += `<div class="card-header" style="margin-top: 1rem;">
+                    <h2 class="card-title" style="color: var(--warning);">
+                        <i class="fas fa-exclamation-circle"></i> Risque fiscal MOYEN
+                    </h2>
+                    <span class="badge badge-warning">${alertesParRisque.moyen.length} chantier${alertesParRisque.moyen.length > 1 ? 's' : ''}</span>
+                </div>`;
+                alertesParRisque.moyen.forEach(item => {
+                    const { chantier, score, alertes, recommendations } = item;
+                    html += `<div class="alert alert-warning">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <div style="flex:1;">
+                            <strong>${chantier.nom}</strong>
+                            <div style="font-size: 0.9em; margin-top: 0.3rem; color: rgba(0,0,0,0.7);">
+                                Score de risque: <strong>${score}/100</strong>
+                            </div>`;
+                    if (alertes.length > 0) {
+                        html += `<div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(0,0,0,0.05); border-radius: 4px;">
+                            <strong style="font-size: 0.9em;">Points d'attention :</strong>
+                            <ul style="margin: 0.3rem 0; padding-left: 1.5rem; font-size: 0.9em;">`;
+                        alertes.forEach(a => {
+                            html += `<li>${a}</li>`;
+                        });
+                        html += `</ul></div>`;
+                    }
+                    if (recommendations.length > 0) {
+                        html += `<div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(16,185,129,0.05); border-radius: 4px;">
+                            <strong style="font-size: 0.9em; color: var(--secondary);">Recommandations :</strong>
+                            <ul style="margin: 0.3rem 0; padding-left: 1.5rem; font-size: 0.9em;">`;
+                        recommendations.forEach(r => {
+                            html += `<li><em>${r}</em></li>`;
+                        });
+                        html += `</ul></div>`;
+                    }
+                    html += `<div style="margin-top: 0.5rem;">
+                        <button class="btn btn-secondary" style="font-size: 0.85em;" onclick="window.viewChantierDetails && window.viewChantierDetails(${chantier.id})">
+                            <i class="fas fa-eye"></i> Détails
+                        </button>
+                    </div>
+                        </div>
+                    </div>`;
+                });
+            }
+
+            // Échéances dépassées
+            if (echeancesDepassees.length > 0) {
+                html += `<div class="card-header" style="margin-top: 1rem;">
+                    <h2 class="card-title" style="color: var(--danger);">
+                        <i class="fas fa-calendar-times"></i> Échéances dépassées
+                    </h2>
+                    <span class="badge badge-danger">${echeancesDepassees.length}</span>
+                </div>`;
+                echeancesDepassees.forEach(e => {
+                    html += `<div class="alert alert-danger">
+                        <i class="fas fa-clock"></i>
+                        <div style="flex:1;">
+                            <strong>${e.chantier} — ${e.type}</strong>
+                            <div style="font-size: 0.9em; margin-top: 0.3rem; color: rgba(0,0,0,0.7);">
+                                ${e.description} (Date : <strong>${e.date}</strong>)
+                            </div>
+                            <button class="btn btn-warning" style="margin-top: 0.5rem; font-size: 0.85em;" onclick="window.viewChantierDetails && window.viewChantierDetails(${e.chantierId})">
+                                <i class="fas fa-arrow-right"></i> Agir
+                            </button>
+                        </div>
+                    </div>`;
+                });
+            }
+
+            // Résumé des chantiers sains
+            if (alertesParRisque.bas.length > 0) {
+                html += `<div class="card-header" style="margin-top: 1rem;">
+                    <h2 class="card-title" style="color: var(--secondary);">
+                        <i class="fas fa-check-circle"></i> Chantiers conformes
+                    </h2>
+                    <span class="badge badge-success">${alertesParRisque.bas.length}</span>
+                </div>`;
+                html += `<div class="alert alert-success">
+                    <i class="fas fa-smile-wink"></i>
+                    <div><strong>${alertesParRisque.bas.map(x => x.chantier.nom).join(', ')}</strong> — Aucun problème fiscal détecté.</div>
+                </div>`;
+            }
         }
+
         container.innerHTML = html;
     },
 
@@ -381,10 +475,16 @@ window.UIModule = {
         if (chantier.role === 'sous-traitant') {
             items.push({ id: 'contrat_sous_traitance', label: "Contrat de sous-traitance signé", required: true });
             items.push({ id: 'autoliquidation_mention', label: "Mention autoliquidation sur factures", required: true });
+            if (chantier.typeClient === 'public') {
+                items.push({ id: 'acceptation_paiement_direct', label: "Demande d'acceptation et paiement direct (DC4)", required: true });
+            }
         } else {
             // Principale
             if (chantier.nature === 'renovation' || chantier.nature === 'renovation_energetique') {
                 items.push({ id: 'attestation_tva_reduite', label: "Attestation TVA simplifiée client", required: true });
+            }
+            if (chantier.typeClient === 'public') {
+                items.push({ id: 'notification_marche', label: "Notification du marché public", required: true });
             }
         }
 
@@ -447,22 +547,23 @@ window.UIModule = {
         if (form) {
             form.onsubmit = (e) => {
                 e.preventDefault();
-                const formData = {
-                    nom: document.getElementById('chantierName').value,
-                    client: document.getElementById('chantierClient').value,
-                    budget: parseFloat(document.getElementById('chantierBudget').value),
-                    acomptesPourcentage: parseFloat(document.getElementById('chantierAcomptes').value),
-                    dateDebut: document.getElementById('chantierDateDebut').value,
-                    nature: document.getElementById('chantierNature').value,
-                    role: document.getElementById('chantierRole').value,
-                    typeClient: document.getElementById('chantierTypeClient').value
+                const formData = new FormData(form);
+                const data = {
+                    nom: formData.get('nom'),
+                    client: formData.get('client'),
+                    budget: parseFloat(formData.get('budget')),
+                    acomptesPourcentage: parseFloat(formData.get('acomptesPourcentage')),
+                    dateDebut: formData.get('dateDebut'),
+                    nature: formData.get('nature'),
+                    role: formData.get('role'),
+                    typeClient: formData.get('typeClient')
                 };
 
                 if (this.state.editingId) {
-                    ChantiersModule.updateChantier(this.state.editingId, formData);
+                    ChantiersModule.updateChantier(this.state.editingId, data);
                     alert('Chantier mis à jour avec succès !');
                 } else {
-                    ChantiersModule.addChantier(formData);
+                    ChantiersModule.addChantier(data);
                     alert('Chantier créé avec succès !');
                 }
                 
@@ -476,6 +577,9 @@ window.UIModule = {
         if(openBtn) {
             openBtn.onclick = () => {
                 this.state.editingId = null;
+                document.getElementById('chantierModalTitle').textContent = 'Nouveau Chantier';
+                document.getElementById('chantierSubmitBtn').textContent = 'Créer le chantier';
+                if(form) form.reset();
                 window.openModal('newChantierModal');
             };
         }
@@ -527,14 +631,17 @@ window.UIModule = {
                 document.getElementById('chantierModalTitle').textContent = 'Modifier Chantier';
                 document.getElementById('chantierSubmitBtn').textContent = 'Mettre à jour';
                 
-                document.getElementById('chantierName').value = c.nom;
-                document.getElementById('chantierClient').value = c.client;
-                document.getElementById('chantierBudget').value = c.budget;
-                document.getElementById('chantierAcomptes').value = c.acomptesPourcentage || 0;
-                document.getElementById('chantierDateDebut').value = c.dateDebut;
-                document.getElementById('chantierNature').value = c.nature || 'neuf';
-                document.getElementById('chantierRole').value = c.role || 'principale';
-                document.getElementById('chantierTypeClient').value = c.typeClient || 'prive';
+                const form = document.getElementById('newChantierForm');
+                if (form) {
+                    if(form.elements['nom']) form.elements['nom'].value = c.nom;
+                    if(form.elements['client']) form.elements['client'].value = c.client;
+                    if(form.elements['budget']) form.elements['budget'].value = c.budget;
+                    if(form.elements['acomptesPourcentage']) form.elements['acomptesPourcentage'].value = c.acomptesPourcentage || 0;
+                    if(form.elements['dateDebut']) form.elements['dateDebut'].value = c.dateDebut;
+                    if(form.elements['nature']) form.elements['nature'].value = c.nature || 'neuf';
+                    if(form.elements['role']) form.elements['role'].value = c.role || 'principale';
+                    if(form.elements['typeClient']) form.elements['typeClient'].value = c.typeClient || 'prive';
+                }
                 
                 window.openModal('newChantierModal');
             }
@@ -547,20 +654,21 @@ window.UIModule = {
                  if(modal) {
                     const setContent = (id, val) => { const el = document.getElementById(id); if(el) el.innerHTML = val; };
                     
-                    setContent('detailsName', c.nom);
-                    setContent('detailsClient', c.client);
-                    setContent('detailsBudget', new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(c.budget));
-                    setContent('detailsAcomptes', c.acomptesPourcentage + '%');
-                    setContent('detailsDateDebut', new Date(c.dateDebut).toLocaleDateString('fr-FR'));
-                    setContent('detailsType', c.nature);
+                    setContent('chantierDetailsName', c.nom);
+                    setContent('chantierDetailsClient', c.client);
+                    setContent('chantierDetailsBudget', new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(c.budget));
+                    setContent('chantierDetailsNature', c.nature);
+                    setContent('chantierDetailsRole', c.role);
                     
                     // Statut détaillé
-                    const regime = c.regimeTVA || FiscalRules.determinerRegimeTVA(c);
+                    const regime = c.regimeTVA || (window.FiscalRules ? FiscalRules.determinerRegimeTVA(c) : {code:'?', taux:'?'});
                     const statutHtml = `
-                        <span class="badge badge-${c.statutFiscal}">${c.statutFiscal}</span><br>
-                        <small>TVA: ${regime.code} (${regime.taux}%)</small>
+                        <span class="badge badge-${c.statutFiscal}">${c.statutFiscal === 'success' ? 'Conforme' : (c.statutFiscal === 'warning' ? 'À vérifier' : 'Non conforme')}</span>
+                        <div style="font-size:0.85em; color:#555; margin-top:0.3rem;">
+                            TVA: <strong>${regime.taux}%</strong> (${regime.code})
+                        </div>
                     `;
-                    setContent('detailsStatut', statutHtml);
+                    setContent('chantierDetailsStatut', statutHtml);
 
                     window.openModal('chantierDetailsModal');
                  }
