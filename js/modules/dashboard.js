@@ -19,12 +19,14 @@ window.DashboardModule = {
         }
         // Calcul des indicateurs
         const totalChantiers = chantiers.length;
-        const alertesEnCours = chantiers.filter(c => c.statutFiscal === 'danger' || c.statutFiscal === 'warning').length;
-        const chantiersConformes = chantiers.filter(c => c.statutFiscal === 'success').length;
-        const conformite = totalChantiers > 0 ? Math.round((chantiersConformes / totalChantiers) * 100) : 100;
+        const totalCA = chantiers.reduce((sum, c) => sum + (Number(c.budget || 0) || 0), 0);
+        const totalTVA = chantiers.reduce((sum, c) => sum + (Number(c.tvaDue || 0) || 0), 0);
+        const totalMarge = chantiers.reduce((sum, c) => sum + (Number(c.marge || 0) || 0), 0);
+
         this.updateStatValue('stat-chantiers-actifs', totalChantiers);
-        this.updateStatValue('stat-alertes', alertesEnCours);
-        this.updateStatValue('stat-conformite', conformite + '%');
+        this.updateStatValue('stat-ca-total', window.FiscalRules ? FiscalRules.formatFCFA(totalCA) : `${totalCA}`);
+        this.updateStatValue('stat-tva-a-declarer', window.FiscalRules ? FiscalRules.formatFCFA(totalTVA) : `${totalTVA}`);
+        this.updateStatValue('stat-marge-totale', window.FiscalRules ? FiscalRules.formatFCFA(totalMarge) : `${totalMarge}`);
         this.renderActionsPrioritaires(chantiers);
     },
 

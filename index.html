@@ -8,6 +8,16 @@
     <link rel="stylesheet" href="styles.css">   
 </head>
 <body>
+    <!-- Message petit écran (masqué par défaut, montré via CSS sur mobile/tablette) -->
+    <div id="small-screen-blocker">
+        <div class="small-screen-card">
+            <i class="fas fa-desktop"></i>
+            <h1>FiscalBTP Pro</h1>
+            <p>Cette application est optimisée pour un écran large (ordinateur ou grande tablette en mode paysage).</p>
+            <p style="font-size:0.9rem; opacity:0.8;">Veuillez l’ouvrir depuis un poste de travail pour une meilleure expérience.</p>
+        </div>
+    </div>
+
     <!-- Header -->
     <header class="header">
         <div class="header-content">
@@ -78,7 +88,7 @@
                         <div class="stat-header">
                             <div>
                                 <div class="stat-value" id="stat-chantiers-actifs">--</div>
-                                <div class="stat-label">Chantiers actifs</div>
+                                <div class="stat-label">Chantiers suivis</div>
                             </div>
                             <div class="stat-icon primary">
                                 <i class="fas fa-building"></i>
@@ -89,23 +99,11 @@
                     <div class="stat-card">
                         <div class="stat-header">
                             <div>
-                                <div class="stat-value" id="stat-alertes">--</div>
-                                <div class="stat-label">Alertes en cours</div>
-                            </div>
-                            <div class="stat-icon warning">
-                                <i class="fas fa-exclamation-circle"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-value" id="stat-conformite">--%</div>
-                                <div class="stat-label">Conformité fiscale</div>
+                                <div class="stat-value" id="stat-ca-total">--</div>
+                                <div class="stat-label">CA total (FCFA)</div>
                             </div>
                             <div class="stat-icon success">
-                                <i class="fas fa-check-circle"></i>
+                                <i class="fas fa-sack-dollar"></i>
                             </div>
                         </div>
                     </div>
@@ -113,11 +111,23 @@
                     <div class="stat-card">
                         <div class="stat-header">
                             <div>
-                                <div class="stat-value">5</div>
-                                <div class="stat-label">Échéances 7 jours</div>
+                                <div class="stat-value" id="stat-tva-a-declarer">--</div>
+                                <div class="stat-label">TVA à déclarer (FCFA)</div>
+                            </div>
+                            <div class="stat-icon warning">
+                                <i class="fas fa-receipt"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value" id="stat-marge-totale">--</div>
+                                <div class="stat-label">Marge totale (FCFA)</div>
                             </div>
                             <div class="stat-icon danger">
-                                <i class="fas fa-calendar-alt"></i>
+                                <i class="fas fa-chart-line"></i>
                             </div>
                         </div>
                     </div>
@@ -168,10 +178,14 @@
             <section id="chantiers" class="section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                     <h1>Gestion des chantiers</h1>
-                    <button id="openNewChantierBtn" class="btn btn-primary" onclick="openModal('newChantierModal')">
-                        <i class="fas fa-plus"></i>
-                        Nouveau chantier
-                    </button>
+                    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:flex-end;">
+                        <button class="btn btn-outline" onclick="window.exportChantiersCSV && window.exportChantiersCSV()"><i class="fas fa-file-csv"></i> Exporter chantiers (CSV)</button>
+                        <button class="btn btn-outline" onclick="window.exportChantiersJSON && window.exportChantiersJSON()"><i class="fas fa-file-code"></i> Exporter chantiers (JSON)</button>
+                        <button id="openNewChantierBtn" class="btn btn-primary" onclick="openModal('newChantierModal')">
+                            <i class="fas fa-plus"></i>
+                            Nouveau chantier
+                        </button>
+                    </div>
                 </div>
 
                 <div class="card">
@@ -255,6 +269,7 @@
 
                 <div style="display:flex; gap:1rem; margin-bottom:1rem;">
                     <button class="btn btn-outline" onclick="window.exportAlertesCSV && window.exportAlertesCSV()"><i class="fas fa-file-csv"></i> Exporter Alertes (CSV)</button>
+                    <button class="btn btn-outline" onclick="window.exportAuditCSV && window.exportAuditCSV()"><i class="fas fa-file-csv"></i> Exporter Historique (CSV)</button>
                 </div>
                 <div class="card" id="alertes-dyn-container">
                     <!-- Alertes dynamiques générées par JS -->
@@ -278,7 +293,15 @@
                     </div>
                     <div class="card-header">
                         <h2 class="card-title"><i class="fas fa-folder"></i> Mes documents</h2>
-                        <button class="btn btn-primary"><i class="fas fa-upload"></i> Importer</button>
+                        <div style="display:flex; gap:0.75rem; align-items:center;">
+                            <select id="documentsChantierSelect" class="form-select" style="max-width: 320px;">
+                                <option value="">Tous les chantiers</option>
+                            </select>
+                            <label class="btn btn-primary" style="cursor:pointer;">
+                                <i class="fas fa-upload"></i> Importer
+                                <input id="documentUploadInput" type="file" multiple style="display:none;">
+                            </label>
+                        </div>
                     </div>
                     <div class="table-container">
                         <table>
@@ -291,22 +314,7 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Déclaration TVA Janvier.pdf</td>
-                                    <td>PDF</td>
-                                    <td>15/01/2026</td>
-                                    <td>2.4 MB</td>
-                                    <td><button class="action-btn"><i class="fas fa-download"></i></button></td>
-                                </tr>
-                                <tr>
-                                    <td>Attestation Urssaf.pdf</td>
-                                    <td>PDF</td>
-                                    <td>10/01/2026</td>
-                                    <td>1.1 MB</td>
-                                    <td><button class="action-btn"><i class="fas fa-download"></i></button></td>
-                                </tr>
-                            </tbody>
+                            <tbody id="documentsTableBody"></tbody>
                         </table>
                     </div>
                 </div>
@@ -317,11 +325,11 @@
                 <h1 style="margin-bottom: 2rem;">Rapports et Analyses</h1>
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-value">1.2M€</div>
+                        <div class="stat-value">—</div>
                         <div class="stat-label">CA Cumulé 2026</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-value">240k€</div>
+                        <div class="stat-value">—</div>
                         <div class="stat-label">TVA Collectée</div>
                     </div>
                 </div>
@@ -342,6 +350,29 @@
                 <div style="display:flex; gap:1rem; margin-bottom:1rem;">
                     <button class="btn btn-outline" onclick="window.resetCustomRules && window.resetCustomRules()"><i class="fas fa-redo"></i> Réinitialiser par défaut</button>
                     <button class="btn btn-success" onclick="window.loadCustomRulesForm && window.loadCustomRulesForm()"><i class="fas fa-upload"></i> Charger config</button>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-calendar-check"></i> Périodicité de TVA</h2>
+                    </div>
+                    <div style="padding:1rem;">
+                        <div class="form-grid-2">
+                            <div>
+                                <label style="display:block; margin-bottom:0.5rem;"><strong>Périodicité</strong></label>
+                                <select id="tva-periodicite" class="form-select">
+                                    <option value="mensuelle">Mensuelle</option>
+                                    <option value="trimestrielle">Trimestrielle</option>
+                                </select>
+                                <small>Impacte les échéances de déclaration TVA (dashboard + alertes)</small>
+                            </div>
+                            <div>
+                                <label style="display:block; margin-bottom:0.5rem;"><strong>Jours d'alerte avant échéance</strong></label>
+                                <input id="threshold-ech" type="number" class="form-input" min="1" step="1" placeholder="7">
+                                <small>Ex: alerte si une échéance est dans 7 jours</small>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" style="margin-top:1rem;" onclick="window.saveCustomPeriodicity && window.saveCustomPeriodicity()"><i class="fas fa-save"></i> Enregistrer</button>
+                    </div>
                 </div>
                 <div class="card">
                     <div class="card-header">
@@ -375,7 +406,7 @@
                     <div style="padding:1rem;">
                         <div class="form-grid-2">
                             <div>
-                                <label style="display:block; margin-bottom:0.5rem;"><strong>Budget minimum pour URSSAF (€)</strong></label>
+                                <label style="display:block; margin-bottom:0.5rem;"><strong>Budget minimum pour URSSAF (FCFA)</strong></label>
                                 <input id="threshold-urssaf" type="number" class="form-input" min="0" step="100" placeholder="5000">
                             </div>
                             <div>
@@ -411,12 +442,13 @@
                     <div class="form-group">
                         <label>Type de client</label>
                         <select name="typeClient" class="form-select" required>
-                            <option value="prive">Privé (Particulier/Entreprise)</option>
-                            <option value="public">Marché Public</option>
+                            <option value="particulier">Particulier</option>
+                            <option value="entreprise">Entreprise</option>
+                            <option value="administration">Administration</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Budget (€)</label>
+                        <label>Montant du chantier (FCFA)</label>
                         <input type="number" name="budget" class="form-input" required>
                     </div>
                 </div>
@@ -428,6 +460,20 @@
                     <div class="form-group">
                         <label>Date de début</label>
                         <input type="date" name="dateDebut" class="form-input" required>
+                    </div>
+                </div>
+                <div class="form-grid-3">
+                    <div class="form-group">
+                        <label>Coût main d'œuvre (FCFA)</label>
+                        <input type="number" name="coutMainOeuvre" class="form-input" min="0" step="1" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Coût matériaux (FCFA)</label>
+                        <input type="number" name="coutMateriaux" class="form-input" min="0" step="1" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Autres coûts (FCFA)</label>
+                        <input type="number" name="autresCouts" class="form-input" min="0" step="1" placeholder="0">
                     </div>
                 </div>
                 <div class="form-group">
@@ -442,7 +488,7 @@
                 <div class="form-group">
                     <label>Rôle de l'entreprise</label>
                     <select name="role" class="form-select" required>
-                        <option value="principale">Entreprise Principale</option>
+                        <option value="titulaire">Titulaire (Entreprise principale)</option>
                         <option value="sous-traitant">Sous-traitant</option>
                     </select>
                 </div>

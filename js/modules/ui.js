@@ -1,19 +1,45 @@
 // Gestion documentaire avancée (upload, archivage, checklist)
 document.addEventListener('DOMContentLoaded', function() {
     const input = document.getElementById('documentUploadInput');
+    const select = document.getElementById('documentsChantierSelect');
+
+    const getDocs = () => JSON.parse(localStorage.getItem('btp_documents') || '[]');
+    const setDocs = (docs) => localStorage.setItem('btp_documents', JSON.stringify(docs));
+
+    const updateDocumentsSelect = () => {
+        if (!select || !window.ChantiersModule) return;
+        const current = select.value;
+        const chantiers = ChantiersModule.getAll();
+        select.innerHTML = '<option value="">Tous les chantiers</option>' +
+            chantiers.map(c => `<option value="${c.id}">${c.nom}</option>`).join('');
+        if (current) select.value = current;
+    };
+
+    if (select) {
+        select.addEventListener('change', () => window.renderDocumentsTable && window.renderDocumentsTable());
+    }
+    if (window.ChantiersModule) {
+        updateDocumentsSelect();
+        window.addEventListener('chantiersUpdated', updateDocumentsSelect);
+    }
+
     if (input) {
         input.addEventListener('change', function(e) {
-            let docs = JSON.parse(localStorage.getItem('btp_documents') || '[]');
+            let docs = getDocs();
+            const chantierId = select && select.value ? Number(select.value) : null;
+            const chantier = chantierId && window.ChantiersModule ? ChantiersModule.getById(chantierId) : null;
             Array.from(e.target.files).forEach(f => {
                 docs.push({
                     name: f.name,
                     type: f.type,
                     size: f.size,
                     date: new Date().toLocaleDateString('fr-FR'),
+                    chantierId: chantierId,
+                    chantierName: chantier ? chantier.nom : '',
                     content: null // Pour démo, pas de stockage binaire
                 });
             });
-            localStorage.setItem('btp_documents', JSON.stringify(docs));
+            setDocs(docs);
             window.renderDocumentsTable && window.renderDocumentsTable();
             input.value = '';
         });
@@ -21,25 +47,37 @@ document.addEventListener('DOMContentLoaded', function() {
     window.renderDocumentsTable = function() {
         const tbody = document.getElementById('documentsTableBody');
         if (!tbody) return;
-        let docs = JSON.parse(localStorage.getItem('btp_documents') || '[]');
+        let docs = getDocs();
+        const allDocs = docs;
+        const chantierFilter = select && select.value ? Number(select.value) : null;
+        if (chantierFilter) {
+            docs = docs
+                .map((d, idx) => ({ ...d, __idx: idx }))
+                .filter(d => Number(d.chantierId) === chantierFilter);
+        } else {
+            docs = docs.map((d, idx) => ({ ...d, __idx: idx }));
+        }
         if (!docs.length) {
             tbody.innerHTML = '<tr><td colspan="5" style="color:#888;">Aucun document importé.</td></tr>';
             return;
         }
         tbody.innerHTML = docs.map((d, i) => `
             <tr>
-                <td>${d.name}</td>
+                <td>
+                    <div style="font-weight:600;">${d.name}</div>
+                    ${d.chantierName ? `<div style="font-size:0.85em; color:#666;">${d.chantierName}</div>` : ''}
+                </td>
                 <td>${d.type || 'Fichier'}</td>
                 <td>${d.date}</td>
                 <td>${(d.size/1024).toFixed(1)} KB</td>
-                <td><button class="action-btn" onclick="window.deleteDocument && window.deleteDocument(${i})"><i class="fas fa-trash"></i></button></td>
+                <td><button class="action-btn" onclick="window.deleteDocument && window.deleteDocument(${d.__idx})"><i class="fas fa-trash"></i></button></td>
             </tr>
         `).join('');
     };
     window.deleteDocument = function(idx) {
-        let docs = JSON.parse(localStorage.getItem('btp_documents') || '[]');
+        let docs = getDocs();
         docs.splice(idx,1);
-        localStorage.setItem('btp_documents', JSON.stringify(docs));
+        setDocs(docs);
         window.renderDocumentsTable && window.renderDocumentsTable();
     };
     window.renderDocumentsTable && window.renderDocumentsTable();
@@ -107,6 +145,81 @@ window.exportAlertesCSV = function() {
     setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);}, 100);
 };
 
+// Export CSV des chantiers (pour logiciel comptable / analyse)
+window.exportChantiersCSV = function() {
+    if (!window.ChantiersModule) return;
+    const chantiers = ChantiersModule.getAll();
+    if (!chantiers.length) { alert('Aucun chantier à exporter.'); return; }
+    const headers = [
+        'Id','Nom','Client','TypeClient','Nature','Role','MontantFCFA','AcomptesPourcentage',
+        'TotalAcomptesFCFA','ResteAPayerFCFA','TvaTaux','TvaDueFCFA',
+        'CoutMainOeuvreFCFA','CoutMateriauxFCFA','AutresCoutsFCFA','TotalCoutsFCFA','MargeFCFA',
+        'StatutFiscal','Validated','DateDebut'
+    ];
+    let csv = headers.join(';') + '\n';
+    const safe = (v) => String(v ?? '').replace(/;/g, ',').replace(/\n/g,' ');
+    chantiers.forEach(c => {
+        const regime = c.regimeTVA || (window.FiscalRules ? FiscalRules.determinerRegimeTVA(c) : { taux: '' });
+        const row = [
+            c.id, safe(c.nom), safe(c.client), safe(c.typeClient), safe(c.nature), safe(c.role),
+            c.budget || 0, c.acomptesPourcentage || 0,
+            c.totalAcomptes || 0, c.resteAPayer || 0, regime.taux ?? '',
+            c.tvaDue || 0,
+            c.coutMainOeuvre || 0, c.coutMateriaux || 0, c.autresCouts || 0, c.totalCouts || 0, c.marge || 0,
+            safe(c.statutFiscal), c.validated ? '1' : '0', safe(c.dateDebut)
+        ];
+        csv += row.map(safe).join(';') + '\n';
+    });
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'chantiers_btp.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);}, 100);
+};
+
+// Export JSON des chantiers (sauvegarde/interop)
+window.exportChantiersJSON = function() {
+    if (!window.ChantiersModule) return;
+    const payload = {
+        exportDate: new Date().toISOString(),
+        currency: 'FCFA',
+        chantiers: ChantiersModule.getAll()
+    };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'chantiers_btp.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);}, 100);
+};
+
+// Export CSV de l'historique (traçabilité)
+window.exportAuditCSV = function() {
+    let logs = [];
+    try { logs = JSON.parse(localStorage.getItem('btp_audit_log') || '[]'); } catch(e) {}
+    if (!logs.length) { alert('Aucun historique à exporter.'); return; }
+    let csv = 'Date;Utilisateur;Action;ChantierId;Details\n';
+    const safe = (v) => String(v ?? '').replace(/;/g, ',').replace(/\n/g,' ');
+    logs.slice().reverse().forEach(l => {
+        const dateStr = l.ts ? new Date(l.ts).toLocaleString('fr-FR') : '';
+        csv += `${safe(dateStr)};${safe(l.user)};${safe(l.action)};${safe(l.chantierId)};${safe(JSON.stringify(l.details || {}))}\n`;
+    });
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'historique_actions.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);}, 100);
+};
+
 // Export CSV du calendrier fiscal
 window.exportCalendarCSV = function() {
     if (!window.FiscalRules || !window.ChantiersModule) return;
@@ -153,7 +266,9 @@ window.UIModule = {
         this.setupChantierUI();
         this.setupGuidageUI();
         this.renderAlertesDyn();
+        this.renderAuditHistory();
         window.addEventListener('chantiersUpdated', () => this.renderAlertesDyn());
+        window.addEventListener('auditUpdated', () => this.renderAuditHistory());
     },
     /**
      * Affiche dynamiquement les alertes réelles dans l'onglet Alertes
@@ -165,6 +280,11 @@ window.UIModule = {
         const chantiers = window.ChantiersModule ? ChantiersModule.getAll() : [];
         let alertesParRisque = { haut: [], moyen: [], bas: [] };
         let echeancesDepassees = [];
+        let echeancesProches = [];
+        const periodicityCfg = window.CustomRulesModule && typeof CustomRulesModule.getPeriodicityConfig === 'function'
+            ? CustomRulesModule.getPeriodicityConfig()
+            : {};
+        const thresholdDays = periodicityCfg.thresholdEcheanceDays || 7;
 
         // 1. Alertes par niveau de risque fiscal
         chantiers.forEach(c => {
@@ -187,6 +307,12 @@ window.UIModule = {
             chantiers.forEach(c => {
                 const echeances = FiscalRules.genererEcheances(c);
                 echeances.forEach(e => {
+                    const dateObj = e.date ? new Date(e.date) : null;
+                    if (!dateObj || Number.isNaN(dateObj.getTime())) return;
+                    const now = new Date();
+                    const delta = dateObj.getTime() - now.getTime();
+                    const within = delta >= 0 && delta <= thresholdDays * 24 * 3600 * 1000;
+
                     if (e.date && new Date(e.date) < new Date() && (e.statut === 'urgent' || e.statut === 'retard')) {
                         echeancesDepassees.push({
                             chantier: c.nom,
@@ -197,13 +323,23 @@ window.UIModule = {
                             priority: e.priority || 'important'
                         });
                     }
+                    if (within && e.statut !== 'valide') {
+                        echeancesProches.push({
+                            chantier: c.nom,
+                            chantierId: c.id,
+                            type: e.type,
+                            description: e.description || '',
+                            date: dateObj.toLocaleDateString('fr-FR'),
+                            priority: e.priority || 'important'
+                        });
+                    }
                 });
             });
         }
 
         // Construction du HTML
         let html = '';
-        const hasAlertes = alertesParRisque.haut.length + alertesParRisque.moyen.length + echeancesDepassees.length > 0;
+        const hasAlertes = alertesParRisque.haut.length + alertesParRisque.moyen.length + echeancesDepassees.length + echeancesProches.length > 0;
 
         if (!hasAlertes && alertesParRisque.bas.length === 0) {
             html = '<div class="alert alert-success"><i class="fas fa-check-circle"></i> <strong>Excellent !</strong> Aucune alerte critique détectée. Tous les chantiers sont conformes.</div>';
@@ -322,6 +458,30 @@ window.UIModule = {
                 });
             }
 
+            // Échéances proches
+            if (echeancesProches.length > 0) {
+                html += `<div class="card-header" style="margin-top: 1rem;">
+                    <h2 class="card-title" style="color: var(--warning);">
+                        <i class="fas fa-calendar-exclamation"></i> Échéances proches (${thresholdDays} jours)
+                    </h2>
+                    <span class="badge badge-warning">${echeancesProches.length}</span>
+                </div>`;
+                echeancesProches.slice(0, 6).forEach(e => {
+                    html += `<div class="alert alert-warning">
+                        <i class="fas fa-bell"></i>
+                        <div style="flex:1;">
+                            <strong>${e.chantier} — ${e.type}</strong>
+                            <div style="font-size: 0.9em; margin-top: 0.3rem; color: rgba(0,0,0,0.7);">
+                                ${e.description} (Date : <strong>${e.date}</strong>)
+                            </div>
+                            <button class="btn btn-secondary" style="margin-top: 0.5rem; font-size: 0.85em;" onclick="window.viewChantierDetails && window.viewChantierDetails(${e.chantierId})">
+                                <i class="fas fa-eye"></i> Préparer
+                            </button>
+                        </div>
+                    </div>`;
+                });
+            }
+
             // Résumé des chantiers sains
             if (alertesParRisque.bas.length > 0) {
                 html += `<div class="card-header" style="margin-top: 1rem;">
@@ -338,6 +498,52 @@ window.UIModule = {
         }
 
         container.innerHTML = html;
+    },
+
+    getCurrentUser() {
+        const el = document.querySelector('.user-name');
+        return el ? el.textContent.trim() : 'Utilisateur';
+    },
+
+    auditLog(action, chantierId, details) {
+        try {
+            const key = 'btp_audit_log';
+            const logs = JSON.parse(localStorage.getItem(key) || '[]');
+            logs.unshift({
+                ts: new Date().toISOString(),
+                user: this.getCurrentUser(),
+                action,
+                chantierId: chantierId || null,
+                details: details || {}
+            });
+            localStorage.setItem(key, JSON.stringify(logs.slice(0, 500)));
+            window.dispatchEvent(new CustomEvent('auditUpdated'));
+        } catch(e) {}
+    },
+
+    renderAuditHistory() {
+        const container = document.getElementById('alertes-historique-list');
+        if (!container) return;
+        let logs = [];
+        try { logs = JSON.parse(localStorage.getItem('btp_audit_log') || '[]'); } catch(e) {}
+        if (!logs.length) {
+            container.innerHTML = '<div style="color:#777;">Aucun historique pour le moment.</div>';
+            return;
+        }
+        container.innerHTML = logs.slice(0, 30).map(l => {
+            const d = new Date(l.ts);
+            const dateStr = Number.isNaN(d.getTime()) ? l.ts : d.toLocaleString('fr-FR');
+            const chantierName = (window.ChantiersModule && l.chantierId) ? (ChantiersModule.getById(Number(l.chantierId))?.nom || '') : '';
+            return `
+                <div style="padding:0.75rem 0; border-bottom:1px solid #eee;">
+                    <div style="display:flex; justify-content:space-between; gap:1rem;">
+                        <div style="font-weight:600;">${l.action}${chantierName ? ` — <span style="color:#555; font-weight:500;">${chantierName}</span>` : ''}</div>
+                        <div style="color:#666; font-size:0.85em;">${dateStr}</div>
+                    </div>
+                    <div style="color:#666; font-size:0.9em; margin-top:0.25rem;">${l.user || ''}</div>
+                </div>
+            `;
+        }).join('');
     },
 
     setupNavigation() {
@@ -475,20 +681,24 @@ window.UIModule = {
         if (chantier.role === 'sous-traitant') {
             items.push({ id: 'contrat_sous_traitance', label: "Contrat de sous-traitance signé", required: true });
             items.push({ id: 'autoliquidation_mention', label: "Mention autoliquidation sur factures", required: true });
-            if (chantier.typeClient === 'public') {
+            if (chantier.typeClient === 'administration') {
                 items.push({ id: 'acceptation_paiement_direct', label: "Demande d'acceptation et paiement direct (DC4)", required: true });
             }
         } else {
             // Principale
-            if (chantier.nature === 'renovation' || chantier.nature === 'renovation_energetique') {
+            if ((chantier.nature === 'renovation' || chantier.nature === 'renovation_energetique') && chantier.typeClient === 'particulier') {
                 items.push({ id: 'attestation_tva_reduite', label: "Attestation TVA simplifiée client", required: true });
             }
-            if (chantier.typeClient === 'public') {
-                items.push({ id: 'notification_marche', label: "Notification du marché public", required: true });
+            if (chantier.typeClient === 'administration') {
+                items.push({ id: 'notification_marche', label: "Notification / ordre de service (administration)", required: true });
             }
         }
 
-        if (chantier.budget > 5000) {
+        const customThresholds = window.CustomRulesModule && typeof CustomRulesModule.getCustomThresholds === 'function'
+            ? CustomRulesModule.getCustomThresholds()
+            : {};
+        const thresholdURSSAF = customThresholds.thresholdURSSAF || 5000;
+        if (chantier.budget > thresholdURSSAF) {
             items.push({ id: 'attestation_urssaf', label: "Attestation de vigilance URSSAF", required: true });
         }
 
@@ -556,14 +766,24 @@ window.UIModule = {
                     dateDebut: formData.get('dateDebut'),
                     nature: formData.get('nature'),
                     role: formData.get('role'),
-                    typeClient: formData.get('typeClient')
+                    typeClient: formData.get('typeClient'),
+                    coutMainOeuvre: parseFloat(formData.get('coutMainOeuvre')) || 0,
+                    coutMateriaux: parseFloat(formData.get('coutMateriaux')) || 0,
+                    autresCouts: parseFloat(formData.get('autresCouts')) || 0
                 };
 
                 if (this.state.editingId) {
+                    const current = ChantiersModule.getById(this.state.editingId);
+                    if (current && current.validated) {
+                        alert("Ce chantier est validé. Pour modifier, vous devez d’abord le déverrouiller depuis la fiche chantier.");
+                        return;
+                    }
                     ChantiersModule.updateChantier(this.state.editingId, data);
+                    this.auditLog('Modification chantier', this.state.editingId, { fields: Object.keys(data) });
                     alert('Chantier mis à jour avec succès !');
                 } else {
-                    ChantiersModule.addChantier(data);
+                    const created = ChantiersModule.addChantier(data);
+                    this.auditLog('Création chantier', created?.id, { nom: data.nom });
                     alert('Chantier créé avec succès !');
                 }
                 
@@ -601,11 +821,12 @@ window.UIModule = {
             );
         }
 
+        const fmt = (n) => window.FiscalRules ? FiscalRules.formatFCFA(n) : `${n}`;
         tbody.innerHTML = chantiers.map(c => `
             <tr>
                 <td>${c.nom}</td>
                 <td>${c.client}</td>
-                <td>${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(c.budget)}</td>
+                <td>${fmt(c.budget)}</td>
                 <td>${c.acomptesPourcentage}%</td>
                 <td><span class="badge badge-${c.statutFiscal}">${c.statutFiscal === 'success' ? 'Conforme' : (c.statutFiscal === 'warning' ? 'À vérifier' : 'Non conforme')}</span></td>
                 <td>
@@ -627,6 +848,10 @@ window.UIModule = {
         window.editChantier = (id) => {
             const c = ChantiersModule.getById(id);
             if(c) {
+                if (c.validated) {
+                    alert("Ce chantier est verrouillé (validé). Ouvrez la fiche chantier pour le déverrouiller si nécessaire.");
+                    return;
+                }
                 this.state.editingId = id;
                 document.getElementById('chantierModalTitle').textContent = 'Modifier Chantier';
                 document.getElementById('chantierSubmitBtn').textContent = 'Mettre à jour';
@@ -639,8 +864,11 @@ window.UIModule = {
                     if(form.elements['acomptesPourcentage']) form.elements['acomptesPourcentage'].value = c.acomptesPourcentage || 0;
                     if(form.elements['dateDebut']) form.elements['dateDebut'].value = c.dateDebut;
                     if(form.elements['nature']) form.elements['nature'].value = c.nature || 'neuf';
-                    if(form.elements['role']) form.elements['role'].value = c.role || 'principale';
-                    if(form.elements['typeClient']) form.elements['typeClient'].value = c.typeClient || 'prive';
+                    if(form.elements['role']) form.elements['role'].value = c.role || 'titulaire';
+                    if(form.elements['typeClient']) form.elements['typeClient'].value = c.typeClient || 'entreprise';
+                    if(form.elements['coutMainOeuvre']) form.elements['coutMainOeuvre'].value = c.coutMainOeuvre || 0;
+                    if(form.elements['coutMateriaux']) form.elements['coutMateriaux'].value = c.coutMateriaux || 0;
+                    if(form.elements['autresCouts']) form.elements['autresCouts'].value = c.autresCouts || 0;
                 }
                 
                 window.openModal('newChantierModal');
@@ -656,16 +884,45 @@ window.UIModule = {
                     
                     setContent('chantierDetailsName', c.nom);
                     setContent('chantierDetailsClient', c.client);
-                    setContent('chantierDetailsBudget', new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(c.budget));
+                    setContent('chantierDetailsBudget', window.FiscalRules ? FiscalRules.formatFCFA(c.budget) : `${c.budget}`);
                     setContent('chantierDetailsNature', c.nature);
                     setContent('chantierDetailsRole', c.role);
                     
                     // Statut détaillé
                     const regime = c.regimeTVA || (window.FiscalRules ? FiscalRules.determinerRegimeTVA(c) : {code:'?', taux:'?'});
+                    const calc = window.FiscalRules ? FiscalRules.calculerTVAEtReste(c) : { totalAcomptes: 0, resteAPayer: 0, tvaDue: 0 };
+                    const couts = (Number(c.coutMainOeuvre || 0) || 0) + (Number(c.coutMateriaux || 0) || 0) + (Number(c.autresCouts || 0) || 0);
+                    const marge = (Number(c.budget || 0) || 0) - couts;
                     const statutHtml = `
                         <span class="badge badge-${c.statutFiscal}">${c.statutFiscal === 'success' ? 'Conforme' : (c.statutFiscal === 'warning' ? 'À vérifier' : 'Non conforme')}</span>
                         <div style="font-size:0.85em; color:#555; margin-top:0.3rem;">
                             TVA: <strong>${regime.taux}%</strong> (${regime.code})
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; margin-top:0.75rem;">
+                            <div style="padding:0.5rem; background:#f8fafc; border-radius:8px;">
+                                <div style="color:#666; font-size:0.85em;">Acomptes encaissés</div>
+                                <div style="font-weight:700;">${window.FiscalRules ? FiscalRules.formatFCFA(calc.totalAcomptes) : calc.totalAcomptes}</div>
+                            </div>
+                            <div style="padding:0.5rem; background:#f8fafc; border-radius:8px;">
+                                <div style="color:#666; font-size:0.85em;">Reste à payer</div>
+                                <div style="font-weight:700;">${window.FiscalRules ? FiscalRules.formatFCFA(calc.resteAPayer) : calc.resteAPayer}</div>
+                            </div>
+                            <div style="padding:0.5rem; background:#fff7ed; border-radius:8px;">
+                                <div style="color:#666; font-size:0.85em;">TVA due (sur encaissements)</div>
+                                <div style="font-weight:700;">${regime.autoliquidation ? 'Autoliquidation' : (window.FiscalRules ? FiscalRules.formatFCFA(calc.tvaDue) : calc.tvaDue)}</div>
+                            </div>
+                            <div style="padding:0.5rem; background:#f0fdf4; border-radius:8px;">
+                                <div style="color:#666; font-size:0.85em;">Marge estimée</div>
+                                <div style="font-weight:700;">${window.FiscalRules ? FiscalRules.formatFCFA(marge) : marge}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.75rem;">
+                            <button class="btn btn-secondary" style="font-size:0.85em; padding:0.45rem 0.75rem;" onclick="window.addAcompte && window.addAcompte(${c.id})">
+                                <i class="fas fa-plus"></i> Ajouter acompte
+                            </button>
+                            <button class="btn btn-outline" style="font-size:0.85em; padding:0.45rem 0.75rem;" onclick="window.toggleValidation && window.toggleValidation(${c.id})">
+                                <i class="fas fa-lock"></i> ${c.validated ? 'Déverrouiller' : 'Valider & verrouiller'}
+                            </button>
                         </div>
                     `;
                     setContent('chantierDetailsStatut', statutHtml);
@@ -673,6 +930,37 @@ window.UIModule = {
                     window.openModal('chantierDetailsModal');
                  }
              }
+        };
+
+        window.addAcompte = (id) => {
+            const c = ChantiersModule.getById(id);
+            if (!c) return;
+            const val = prompt("Montant de l'acompte encaissé (FCFA) ?");
+            const montant = Number(val);
+            if (!Number.isFinite(montant) || montant <= 0) return;
+            const acompte = { id: 'a' + Date.now(), date: new Date().toISOString().slice(0,10), montant: Math.round(montant) };
+            const next = Array.isArray(c.acomptes) ? [...c.acomptes, acompte] : [acompte];
+            ChantiersModule.updateChantier(id, { acomptes: next });
+            this.auditLog('Ajout acompte', id, { montant: acompte.montant });
+            alert("Acompte enregistré. La TVA due et le reste à payer ont été recalculés.");
+            window.viewChantierDetails(id);
+        };
+
+        window.toggleValidation = (id) => {
+            const c = ChantiersModule.getById(id);
+            if (!c) return;
+            if (!c.validated) {
+                if (!confirm("Valider ce chantier ? Certaines informations ne seront plus modifiables.")) return;
+                ChantiersModule.updateChantier(id, { validated: true, validatedAt: new Date().toISOString() });
+                this.auditLog('Validation chantier', id, {});
+                alert("Chantier validé et verrouillé.");
+            } else {
+                if (!confirm("Déverrouiller ce chantier ? (action tracée)")) return;
+                ChantiersModule.updateChantier(id, { validated: false });
+                this.auditLog('Déverrouillage chantier', id, {});
+                alert("Chantier déverrouillé.");
+            }
+            window.viewChantierDetails(id);
         };
     }
 };

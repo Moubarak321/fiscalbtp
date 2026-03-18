@@ -4,6 +4,15 @@
 
 window.FiscalRules = {
     /**
+     * Formatte un montant en FCFA (format fr, sans décimales)
+     * @param {number} amount
+     */
+    formatFCFA(amount) {
+        const n = Number.isFinite(amount) ? amount : 0;
+        return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(n)) + ' FCFA';
+    },
+
+    /**
      * Détermine le régime de TVA applicable
      * @param {Object} chantier 
      * @returns {Object} { code, taux, autoliquidation, justification }
@@ -30,6 +39,16 @@ window.FiscalRules = {
         // Règle 2: Rénovation énergétique
         // Locaux d'habitation achevés depuis > 2 ans + travaux éligibles
         if (chantier.nature === 'renovation_energetique') {
+            // Simplification opérationnelle: le taux réduit est surtout pertinent pour l'habitation (souvent particulier).
+            // Si client entreprise/administration, on applique par défaut le taux normal (sauf paramétrage futur).
+            if (chantier.typeClient && chantier.typeClient !== 'particulier') {
+                return {
+                    code: 'TVA_NORMALE_20',
+                    taux: tvaMap.neuf,
+                    autoliquidation: false,
+                    justification: `Client ${chantier.typeClient} : application par défaut de la TVA normale ${tvaMap.neuf}% (taux réduit habitation non présumé)`
+                };
+            }
             return {
                 code: 'TVA_REDUITE_5_5',
                 taux: tvaMap.renovation_energetique,
@@ -41,6 +60,14 @@ window.FiscalRules = {
         // Règle 3: Rénovation habitat > 2 ans
         // Amélioration, transformation, aménagement, entretien
         if (chantier.nature === 'renovation' || chantier.nature === 'entretien') {
+            if (chantier.typeClient && chantier.typeClient !== 'particulier') {
+                return {
+                    code: 'TVA_NORMALE_20',
+                    taux: tvaMap.neuf,
+                    autoliquidation: false,
+                    justification: `Client ${chantier.typeClient} : application par défaut de la TVA normale ${tvaMap.neuf}% (taux 10% habitation non présumé)`
+                };
+            }
             return {
                 code: 'TVA_INTERMEDIAIRE_10',
                 taux: tvaMap.renovation,
@@ -60,6 +87,23 @@ window.FiscalRules = {
     },
 
     /**
+     * Calcule les encaissements (acomptes) et la TVA due.
+     * Hypothèse: les montants saisis sont HT (réglable plus tard si besoin TTC).
+     * @param {Object} chantier
+     * @returns {Object} { totalAcomptes, resteAPayer, tvaDue, tauxTVA, regime }
+     */
+    calculerTVAEtReste(chantier) {
+        const budget = Number(chantier.budget || 0);
+        const acomptes = Array.isArray(chantier.acomptes) ? chantier.acomptes : [];
+        const totalAcomptes = acomptes.reduce((sum, a) => sum + (Number(a.montant || 0) || 0), 0);
+        const resteAPayer = Math.max(0, budget - totalAcomptes);
+        const regime = this.determinerRegimeTVA(chantier);
+        const taux = Number(regime.taux || 0);
+        const tvaDue = regime.autoliquidation ? 0 : Math.round(totalAcomptes * (taux / 100));
+        return { totalAcomptes, resteAPayer, tvaDue, tauxTVA: taux, regime };
+    },
+
+    /**
      * Vérifie les obligations de retenue de garantie
      * @param {Object} chantier 
      * @returns {Object} { obligatoire, taux, message }
@@ -67,7 +111,7 @@ window.FiscalRules = {
     verifierRetenueGarantie(chantier) {
         // La retenue de garantie (5%) est applicable si non remplacée par caution bancaire
         // Marchés privés et publics
-        if (chantier.role === 'principale' || chantier.role === 'sous-traitant') {
+        if (chantier.role === 'titulaire' || chantier.role === 'sous-traitant') {
             return {
                 obligatoire: true,
                 taux: 5,
@@ -103,7 +147,7 @@ window.FiscalRules = {
         // --- 1. Risque TVA & Facturation ---
         
         // Risque Acomptes élevés sans facture correspondante
-        if (chantier.acomptesPourcentage > thresholdAcompte) {
+        if ((chantier.acomptesPourcentage || 0) > thresholdAcompte) {
             // Dans le BTP, de gros acomptes sans avancement prouvé peuvent être risqués (TVA exigible à l'encaissement pour prestataires services)
             // Note: Pour les livraisons de biens, TVA à la livraison. Pour services/travaux, TVA à l'encaissement.
             // Si on n'a pas la facture d'acompte, c'est un problème.
@@ -112,7 +156,7 @@ window.FiscalRules = {
                 alertes.push(`Acomptes > ${thresholdAcompte}% sans facture d'acompte archivée`);
             }
         }
-        if (chantier.acomptesPourcentage > 50) {
+        if ((chantier.acomptesPourcentage || 0) > 50) {
             score += 10; // Cumulatif
             alertes.push("Acomptes très élevés (>50%) : risque de requalification ou trésorerie");
         }
@@ -129,7 +173,7 @@ window.FiscalRules = {
 
         // --- 2. Risque Sous-traitance (Loi 1975) & Marchés Publics ---
         
-        if (chantier.role === 'principale' && chantier.budget > 100000) {
+        if (chantier.role === 'titulaire' && (chantier.budget || 0) > 100000) {
             recommendations.push("Vérifier si recours à sous-traitance (obligation d'acceptation par le maître d'ouvrage)");
         }
 
@@ -141,9 +185,9 @@ window.FiscalRules = {
             if (!docs.includes('caution_bancaire') && !docs.includes('delegation_paiement')) {
                 recommendations.push("Vérifier garantie de paiement (Caution ou Délégation)");
             }
-            // Spécifique Marchés Publics
-            if (chantier.typeClient === 'public') {
-                recommendations.push("Marché Public : Vérifier le droit au paiement direct par le maître d'ouvrage");
+            // Spécifique Administration
+            if (chantier.typeClient === 'administration') {
+                recommendations.push("Administration : Vérifier le droit au paiement direct si sous-traitance et pièces contractuelles");
             }
         }
 
@@ -152,7 +196,7 @@ window.FiscalRules = {
         // Attestation de vigilance URSSAF (tous les 6 mois si > seuil personnalisé)
         if (chantier.budget >= thresholdURSSAF && !docs.includes('attestation_urssaf')) {
             score += 20;
-            alertes.push(`Attestation de vigilance URSSAF manquante (Obligatoire > ${thresholdURSSAF}€)`);
+            alertes.push(`Attestation de vigilance URSSAF manquante (Obligatoire > ${this.formatFCFA(thresholdURSSAF)})`);
         }
         
         // Assurance Décennale
@@ -211,18 +255,36 @@ window.FiscalRules = {
         const today = new Date();
         const start = chantier.dateDebut ? new Date(chantier.dateDebut) : new Date();
         const regime = this.determinerRegimeTVA(chantier);
+        const periodicityCfg = window.CustomRulesModule && typeof CustomRulesModule.getPeriodicityConfig === 'function'
+            ? CustomRulesModule.getPeriodicityConfig()
+            : {};
+        const tvaPeriodicity = periodicityCfg.tvaPeriodicity || 'mensuelle';
 
-        // 1. Déclaration TVA (Mensuelle par défaut) -> prochaine date au 19
-        let nextTvaDate = new Date(today.getFullYear(), today.getMonth(), 19);
-        if (nextTvaDate < today) nextTvaDate = new Date(today.getFullYear(), today.getMonth() + 1, 19);
+        // 1. Déclaration TVA (Mensuelle / Trimestrielle) -> prochaine date au 19
+        let nextTvaDate;
+        if (tvaPeriodicity === 'trimestrielle') {
+            const quarter = Math.floor(today.getMonth() / 3);
+            const quarterEndMonth = quarter * 3 + 2; // 2,5,8,11
+            // Déclaration le 19 du mois suivant la fin du trimestre
+            nextTvaDate = new Date(today.getFullYear(), quarterEndMonth + 1, 19);
+            if (nextTvaDate < today) {
+                const nextQuarter = quarter + 1;
+                const nextQuarterEnd = (nextQuarter % 4) * 3 + 2;
+                const year = today.getFullYear() + (nextQuarter >= 4 ? 1 : 0);
+                nextTvaDate = new Date(year, nextQuarterEnd + 1, 19);
+            }
+        } else {
+            nextTvaDate = new Date(today.getFullYear(), today.getMonth(), 19);
+            if (nextTvaDate < today) nextTvaDate = new Date(today.getFullYear(), today.getMonth() + 1, 19);
+        }
 
-        const taux = regime && regime.taux ? regime.taux : 20;
-        const estimatedTVA = Math.round((chantier.budget || 0) * (taux / 100) * ((chantier.acomptesPourcentage || 0) / 100));
+        const calc = this.calculerTVAEtReste(chantier);
+        const estimatedTVA = calc.tvaDue;
 
         echeances.push({
             type: regime.autoliquidation ? 'Déclaration TVA (Autoliquidation)' : 'Déclaration TVA',
             date: nextTvaDate,
-            montant: regime.autoliquidation ? 'N/A (Autoliquidation)' : (estimatedTVA > 0 ? estimatedTVA + ' €' : '0 €'),
+            montant: regime.autoliquidation ? 'N/A (Autoliquidation)' : this.formatFCFA(estimatedTVA),
             statut: (nextTvaDate < today) ? 'urgent' : 'a_venir',
             priority: (nextTvaDate - today <= 3 * 24 * 3600 * 1000) ? 'critical' : ((nextTvaDate - today <= 14 * 24 * 3600 * 1000) ? 'important' : 'info'),
             description: regime.justification || ''
@@ -236,7 +298,7 @@ window.FiscalRules = {
             echeances.push({
                 type: 'Acompte client',
                 date: acompteDate,
-                montant: montantAcompte + ' €',
+                montant: this.formatFCFA(montantAcompte),
                 statut: (acompteDate < today) ? 'retard' : 'a_venir',
                 priority: (acompteDate - today <= 7 * 24 * 3600 * 1000) ? 'important' : 'info',
                 description: `Acompte ${chantier.acomptesPourcentage}% à prévoir`

@@ -18,6 +18,13 @@ window.CustomRulesModule = {
         } catch(e) { return {}; }
     },
 
+    // Récupérer la configuration de périodicité TVA + alertes échéances
+    getPeriodicityConfig() {
+        try {
+            return JSON.parse(localStorage.getItem('btp_periodicity') || 'null') || {};
+        } catch(e) { return {}; }
+    },
+
     // Sauvegarder les taux de TVA
     saveTVA(tvaData) {
         localStorage.setItem('btp_custom_tva', JSON.stringify(tvaData));
@@ -35,10 +42,18 @@ window.CustomRulesModule = {
         }
     },
 
+    savePeriodicity(config) {
+        localStorage.setItem('btp_periodicity', JSON.stringify(config));
+        if (window.ChantiersModule) {
+            window.ChantiersModule.recalculerTousLesStatuts();
+        }
+    },
+
     // Réinitialiser tous les paramètres personnalisés
     reset() {
         localStorage.removeItem('btp_custom_tva');
         localStorage.removeItem('btp_custom_thresholds');
+        localStorage.removeItem('btp_periodicity');
         alert('Tous les paramètres fiscaux ont été réinitialisés par défaut.');
         if (window.ChantiersModule) {
             window.ChantiersModule.recalculerTousLesStatuts();
@@ -69,12 +84,17 @@ document.addEventListener('DOMContentLoaded', function() {
     window.loadCustomRulesForm = function() {
         const tva = CustomRulesModule.getCustomTVA();
         const thresholds = CustomRulesModule.getCustomThresholds();
+        const periodicity = CustomRulesModule.getPeriodicityConfig();
 
         document.getElementById('tva-neuf').value = tva.neuf || 20;
         document.getElementById('tva-renovation').value = tva.renovation || 10;
         document.getElementById('tva-renovation-energetique').value = tva.renovation_energetique || 5.5;
         document.getElementById('threshold-urssaf').value = thresholds.thresholdURSSAF || 5000;
         document.getElementById('threshold-acompte').value = thresholds.thresholdAcompte || 30;
+        const periodiciteEl = document.getElementById('tva-periodicite');
+        if (periodiciteEl) periodiciteEl.value = periodicity.tvaPeriodicity || 'mensuelle';
+        const echEl = document.getElementById('threshold-ech');
+        if (echEl) echEl.value = periodicity.thresholdEcheanceDays || 7;
     };
 
     window.saveCustomRules = function() {
@@ -101,6 +121,17 @@ document.addEventListener('DOMContentLoaded', function() {
             CustomRulesModule.reset();
             window.loadCustomRulesForm();
         }
+    };
+
+    window.saveCustomPeriodicity = function() {
+        const periodiciteEl = document.getElementById('tva-periodicite');
+        const echEl = document.getElementById('threshold-ech');
+        const config = {
+            tvaPeriodicity: periodiciteEl ? periodiciteEl.value : 'mensuelle',
+            thresholdEcheanceDays: Math.max(1, parseInt(echEl ? echEl.value : '7', 10) || 7)
+        };
+        CustomRulesModule.savePeriodicity(config);
+        alert('Périodicité et seuils d’échéance enregistrés !');
     };
 
     window.exportCustomRules = function() {
