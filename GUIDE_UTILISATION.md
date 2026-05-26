@@ -143,7 +143,7 @@ Un champ de recherche en haut permet de **filtrer les chantiers** par :
 
 ##### Options Nature des travaux
 
-- **Neuf** : Construction neuve → TVA normale 20%
+- **Neuf** : Construction neuve → TVA normale 18%
 - **Rénovation** : Amélioration/entretien habitat > 2 ans → TVA 10%
 - **Rénovation énergétique** : Travaux éligibles en locaux > 2 ans → TVA 5.5%
 - **Entretien** : Maintenance courante → TVA 10%
@@ -285,7 +285,7 @@ Adapter les **règles de calcul** selon votre contexte fiscal spécifique.
 
 | Nature | Défaut | Vous pouvez modifier |
 |--------|--------|------|
-| **Construction neuve** | 20% | ❌ Non (norme légale) |
+| **Construction neuve** | 18% | ❌ Non (norme légale) |
 | **Rénovation** | 10% | ✅ Oui (selon cas) |
 | **Rénovation énergétique** | 5.5% | ✅ Oui (selon travaux) |
 
@@ -418,7 +418,7 @@ Le système applique une **logique hiérarchique** pour déterminer le régime T
 │      (Conditions: habitat > 2 ans) │
 │  → NON : Continuer                 │
 │                                    │
-└─ DÉFAUT : TVA NORMALE 20%          │
+└─ DÉFAUT : TVA NORMALE 18%          │
    (Construction neuve ou commerce)  │
 ```
 
@@ -446,7 +446,7 @@ Budget HT : 100 000 €
 TVA facturée : 0 € (autoliquidation)
 Total : 100 000 €
 
-Déclaration TVA (ligne spéciale) : 20 000 € autoliquidés
+Déclaration TVA (ligne spéciale) : 18 000 € autoliquidés
 ```
 
 #### Régime 2 : TVA Réduite 5,5%
@@ -497,7 +497,7 @@ TVA à 10% : 8 000 €
 Total TTC : 88 000 €
 ```
 
-#### Régime 4 : TVA Normale 20%
+#### Régime 4 : TVA Normale 18%
 
 **Conditions :**
 - **Construction neuve** (y compris surélévation)
@@ -511,15 +511,15 @@ Total TTC : 88 000 €
 **Exemple :**
 ```
 Budget HT : 200 000 €
-TVA à 20% : 40 000 €
-Total TTC : 240 000 €
+TVA à 18% : 36 000 €
+Total TTC : 236 000 €
 ```
 
 ### Exceptions et cas particuliers
 
 | Cas | Régime appliqué | Remarque |
 |-----|-----------------|----------|
-| Vente de maison habitation | 20% | Exonération possible |
+| Vente de maison habitation | 18% | Exonération possible |
 | Travaux en zone sinistrée | 5,5% | Sur justification |
 | Fournitures + Pose | Régime travaux | TVA sur totalité |
 | Travaux par own services | Autoliquidation | Sous certaines conditions |
@@ -736,7 +736,7 @@ Le système génère des **recommendations contextualisées** :
 
 **Règles appliquées :**
 ```
-Régime TVA    → TVA NORMALE 20%
+Régime TVA    → TVA NORMALE 18%
 Justification → Construction neuve (article 277 CGI)
 Documents     → Attestation URSSAF (> 5k€), Assurance décennale
 Alertes       → Vigilance si acomptes > 30%
@@ -747,7 +747,7 @@ Deadline      → TVA déclarée avant 19 du mois suivant
 - [ ] Devis signé
 - [ ] Assurance décennale
 - [ ] Attestation vigilance URSSAF
-- [ ] Factures avec TVA 20%
+- [ ] Factures avec TVA 18%
 
 ### Scénario 2 : Rénovation sous-traitant (PUBLIC)
 
@@ -824,12 +824,12 @@ TOTAL TTC                : 84 400 €
 - Frais directs (matériaux, sous-traitance)
 - Si contesté : risque de requalification TVA.
 
-### Q4. Je suis principal. Mon sous-traitant me facture avec TVA 20%. Est-ce normal ?
-**R.** **NON**. Il devrait facturer en **zéro TVA (autoliquidation)**. S'il facture 20%, il ne respecte pas son statut légal. 🔴 Contactez-le immédiatement.
+### Q4. Je suis principal. Mon sous-traitant me facture avec TVA 18%. Est-ce normal ?
+**R.** **NON**. Il devrait facturer en **zéro TVA (autoliquidation)**. S'il facture 18%, il ne respecte pas son statut légal. 🔴 Contactez-le immédiatement.
 
 ### Q5. Quelle TVA pour une extension de maison habitée depuis 10 ans ?
 **R.** Cela dépend :
-- **Extension = surélévation** ? → TVA 20%
+- **Extension = surélévation** ? → TVA 18%
 - **Extension ≠ surélévation** (annexe) ? → TVA 5,5% si travaux d'amélioration
 - **Amélioration salle de bain/cuisine** ? → TVA 10%
 

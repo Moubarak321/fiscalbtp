@@ -33,7 +33,7 @@ window.FiscalRules = {
         const customTVA = window.CustomRulesModule && typeof CustomRulesModule.getCustomTVA === 'function' 
             ? CustomRulesModule.getCustomTVA() 
             : {};
-        const defaultTVA = { neuf: 20, renovation: 10, renovation_energetique: 5.5 };
+        const defaultTVA = { neuf: 18, renovation: 10, renovation_energetique: 5.5 };
         const tvaMap = { ...defaultTVA, ...customTVA };
 
         // Règle 2: Rénovation énergétique
@@ -43,7 +43,7 @@ window.FiscalRules = {
             // Si client entreprise/administration, on applique par défaut le taux normal (sauf paramétrage futur).
             if (chantier.typeClient && chantier.typeClient !== 'particulier') {
                 return {
-                    code: 'TVA_NORMALE_20',
+                    code: 'TVA_NORMALE_18',
                     taux: tvaMap.neuf,
                     autoliquidation: false,
                     justification: `Client ${chantier.typeClient} : application par défaut de la TVA normale ${tvaMap.neuf}% (taux réduit habitation non présumé)`
@@ -62,7 +62,7 @@ window.FiscalRules = {
         if (chantier.nature === 'renovation' || chantier.nature === 'entretien') {
             if (chantier.typeClient && chantier.typeClient !== 'particulier') {
                 return {
-                    code: 'TVA_NORMALE_20',
+                    code: 'TVA_NORMALE_18',
                     taux: tvaMap.neuf,
                     autoliquidation: false,
                     justification: `Client ${chantier.typeClient} : application par défaut de la TVA normale ${tvaMap.neuf}% (taux 10% habitation non présumé)`
@@ -79,7 +79,7 @@ window.FiscalRules = {
         // Par défaut: TVA Normale
         // Construction neuve, locaux commerciaux, surélévation, ou rénovation < 2 ans
         return {
-            code: 'TVA_NORMALE_20',
+            code: 'TVA_NORMALE_18',
             taux: tvaMap.neuf,
             autoliquidation: false,
             justification: `TVA normale ${tvaMap.neuf}% - Construction neuve ou locaux commerciaux`
@@ -163,7 +163,7 @@ window.FiscalRules = {
 
         // --- Incohérence Nature vs TVA (Requalification) ---
         const regimeAttendu = this.determinerRegimeTVA(chantier);
-        if (regimeAttendu.taux < 20 && !regimeAttendu.autoliquidation) {
+        if (regimeAttendu.taux < 18 && !regimeAttendu.autoliquidation) {
              // Si on s'attend à du 10% ou 5.5% mais qu'on a pas l'attestation, c'est une incohérence majeure
              if (!docs.includes('attestation_tva_reduite')) {
                  score += 25;
@@ -224,7 +224,7 @@ window.FiscalRules = {
                 score += 15;
                 recommendations.push("Vérifier mention 'Autoliquidation' sur les factures émises");
             }
-        } else if (regime.taux < 20) {
+        } else if (regime.taux < 18) {
             // Si taux réduit, il faut l'attestation simplifiée du client
             if (!docs.includes('attestation_tva_reduite')) {
                 score += 20;

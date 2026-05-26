@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const thresholds = CustomRulesModule.getCustomThresholds();
         const periodicity = CustomRulesModule.getPeriodicityConfig();
 
-        document.getElementById('tva-neuf').value = tva.neuf || 20;
+        document.getElementById('tva-neuf').value = tva.neuf || 18;
         document.getElementById('tva-renovation').value = tva.renovation || 10;
         document.getElementById('tva-renovation-energetique').value = tva.renovation_energetique || 5.5;
         document.getElementById('threshold-urssaf').value = thresholds.thresholdURSSAF || 5000;
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     window.saveCustomRules = function() {
         const tvaData = {
-            neuf: parseFloat(document.getElementById('tva-neuf').value) || 20,
+            neuf: parseFloat(document.getElementById('tva-neuf').value) || 18,
             renovation: parseFloat(document.getElementById('tva-renovation').value) || 10,
             renovation_energetique: parseFloat(document.getElementById('tva-renovation-energetique').value) || 5.5
         };
